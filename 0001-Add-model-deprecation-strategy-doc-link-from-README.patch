@@ -1,0 +1,130 @@
+From 12bc41654f22d97234e8c01b5660beea2d64c0aa Mon Sep 17 00:00:00 2001
+From: John Plummer <john@local>
+Date: Tue, 7 Jul 2026 12:31:44 +0000
+Subject: [PATCH] Add model deprecation strategy doc; link from README
+
+- docs/model-deprecation-strategy.md: applies the workshop's evaluation
+  machinery to LLM deprecation/migration (eval harness, shadow traffic via
+  trace-based evaluation, canary with evaluation-driven rollback, promotion
+  decision gate)
+- README.md: structure tree and learning-outcomes updated to reference it
+---
+ README.md                          |  8 ++-
+ docs/model-deprecation-strategy.md | 79 ++++++++++++++++++++++++++++++
+ 2 files changed, 85 insertions(+), 2 deletions(-)
+ create mode 100644 docs/model-deprecation-strategy.md
+
+diff --git a/README.md b/README.md
+index aa012f3..fb2cc5f 100644
+--- a/README.md
++++ b/README.md
+@@ -17,6 +17,8 @@ A complete, ready-to-deliver workshop on evaluating AI agents in production with
+ 3. Running evaluations hands-on: portal, SDK, live agents, and production traces
+ 4. Wiring evaluation into CI/CD gates (Azure DevOps / GitHub Actions) and continuous production monitoring under governance controls
+ 
++As an applied case study, [`docs/model-deprecation-strategy.md`](docs/model-deprecation-strategy.md) shows how the same evaluation machinery de-risks **LLM deprecation and migration** — eval harness, shadow traffic via trace-based evaluation, canary rollout with evaluation-driven rollback, and a promotion decision gate.
++
+ ## Repository structure
+ 
+ ```
+@@ -25,8 +27,10 @@ foundry-evaluations-workshop/
+ ├── LICENSE
+ ├── .gitignore
+ ├── docs/
+-│   └── facilitator-guide.md     ← full facilitator guide: agenda, talk tracks,
+-│                                   lab walkthroughs, timing flex, appendices
++│   ├── facilitator-guide.md     ← full facilitator guide: agenda, talk tracks,
++│   │                               lab walkthroughs, timing flex, appendices
++│   └── model-deprecation-strategy.md   ← applying the evaluation strategy to
++│                                          LLM deprecation & migration
+ ├── slides/
+ │   └── foundry-evals-workshop-deck.pptx   ← 16 slides with speaker notes
+ ├── lab/
+diff --git a/docs/model-deprecation-strategy.md b/docs/model-deprecation-strategy.md
+new file mode 100644
+index 0000000..60efe3d
+--- /dev/null
++++ b/docs/model-deprecation-strategy.md
+@@ -0,0 +1,79 @@
++# Managing LLM Deprecation with an Evaluation Strategy
++
++Provider models deprecate and update on the provider's schedule, not yours. "High confidence before migration" is therefore achieved almost entirely through **your own continuously-run evaluation infrastructure** — not by trusting provider benchmark claims, which rarely reflect your specific task distribution.
++
++This doc extends the workshop with a concrete application: **model migration as a controlled deployment, gated by evaluation at every stage.** The workshop teaches the machinery; this is one of the strongest business cases for building it.
++
++## Core principle
++
++Treat a model migration exactly like any other production deployment: candidate → evaluate → shadow → canary → promote → monitor, with automated gates between each stage. Nothing about "the provider is retiring gpt-x on date Y" changes the shape of this pipeline — it only sets the deadline.
++
++## The six practices, mapped to Foundry evaluation features
++
++| # | Practice | Foundry mechanism (workshop module) |
++|---|---|---|
++| 1 | **Versioned evaluation harness** — golden datasets, regression tests, task metrics, LLM-as-judge | Cloud evaluations with the built-in + custom evaluator catalog; datasets versioned as project data assets (Modules 1–2) |
++| 2 | **Pin model versions explicitly** | Deployment-level pinning; never point production at a floating alias |
++| 3 | **Abstract the model behind a gateway** | APIM AI gateway / adapter layer — swap via config, never in app code |
++| 4 | **Shadow / mirror traffic before cutover** | **Trace-based evaluation**: grade the candidate's shadow outputs against real production inputs, no user exposure (Module 3C) |
++| 5 | **Canary / progressive rollout with rollback triggers** | **Continuous evaluation + Azure Monitor alerts** on evaluator-score degradation per cohort (Module 4.2) |
++| 6 | **Continuous production monitoring** | Continuous evaluation, Agent Monitoring Dashboard, eval↔trace linking for debugging regressions (Module 4.2) |
++
++### 1. The evaluation harness is the migration asset
++
++Everything in Labs 1–2 doubles as migration tooling:
++
++- **Golden dataset** = the workshop's JSONL pattern, grown from real production traffic (trace-based evaluation makes harvesting representative cases nearly free).
++- **Regression rows** = every case that previously failed and was fixed. A migration must never silently reintroduce one.
++- **Same evaluators, held constant** — run candidate vs. incumbent on the *same* dataset with the *same* judge model, and compare **deltas, not absolute scores**. A fixed judge across comparisons is essential; changing the judge mid-migration invalidates the comparison.
++- **Statistical rigour comes free in CI**: the Azure DevOps / GitHub Actions evaluation tasks report per-metric confidence intervals and a **pairwise statistical comparison** across agent/model versions — precisely the "is this difference meaningful or noise?" question a migration decision hinges on (see `examples/`).
++
++### 2–3. Pinning and abstraction make migration a config change
++
++Pin dated/versioned snapshots so a provider-side update can't change behaviour underneath you — deprecation then becomes a scheduled event you control rather than a surprise. Route all calls through a gateway/adapter layer (APIM AI gateway with model routing fits naturally here): no app code should name a model directly, and the cutover itself becomes a routing-policy change with an instant rollback path.
++
++### 4. Shadow traffic: where trace-based evaluation shines
++
++Mirror live production requests to the candidate model without serving its responses. Then:
++
++1. Both incumbent and candidate emit OpenTelemetry traces into Application Insights.
++2. Run **trace-based evaluations** over each stream — same evaluators, same window.
++3. Diff evaluator scores *and* read the judge reasoning on divergent rows. Shadow traffic surfaces the real-world edge cases your golden dataset misses, at zero user risk.
++
++Because trace-based evaluation is framework- and cloud-agnostic, this works even when the candidate runs on different serving infrastructure than the incumbent.
++
++### 5–6. Canary with evaluation-driven rollback, then keep watching
++
++Ramp 1% → 5% → 25% → 100%, segmented by cohort. Wire Azure Monitor alerts on:
++
++- Evaluator score degradation (continuous evaluation on the canary cohort)
++- Operational drift — latency, token consumption, cost per request (models often change token efficiency between generations)
++- **Refusal/safety-filter rate changes**, which frequently shift between model generations and are easy to miss with quality metrics alone
++- User signals: escalations, correction rate, thumbs
++
++Post-migration, continuous evaluation keeps running — the new model becomes the incumbent baseline for the *next* migration.
++
++## Prompts migrate too
++
++Prompts are usually overfit to a specific model's quirks. Budget for **prompt re-tuning as part of every migration**, and version prompts alongside models so an eval result is always attributable to a (model version, prompt version) pair. Keep prompts model-agnostic where feasible, but expect the eval harness — not hope — to tell you when re-tuning is done.
++
++## The decision gate
++
++Promote a candidate only when **all** of the following clear:
++
++- [ ] Eval suite ≥ incumbent on every priority metric; no statistically significant regression on any (use the pairwise comparison, not eyeballs)
++- [ ] Shadow-traffic diffs reviewed, divergent-row judge reasoning read
++- [ ] Cost and latency within budget
++- [ ] Safety/refusal behaviour acceptable (safety evaluators are **hard gates**)
++- [ ] Prompts re-validated against the candidate
++- [ ] Comparison documented as an artifact for audit/governance — Foundry evaluation runs persist in the project, which gives you this for free
++
++## Deprecation timeline hygiene
++
++- Track provider deprecation notices; record each model's announced retirement date in your service catalog.
++- Treat announcement-to-shutdown as a **hard project deadline**, not aspirational.
++- Maintain a fallback chain so a deprecated or unavailable primary degrades gracefully to a known-good alternative — enforced at the gateway, verified by the eval harness.
++
++## Workshop tie-in
++
++If delivering the workshop to a team facing a live deprecation, this doc makes a strong Module 4 closing discussion: *"You have 90 days until your primary model retires — walk the pipeline above and identify which stage you couldn't execute today."* The gaps that surface are the evaluation investments to prioritise.
+-- 
+2.43.0
+

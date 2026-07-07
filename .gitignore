@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets & local config
+.env
+*.local
+
+# Eval outputs
+myevalresults.json
+*.eval-results.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

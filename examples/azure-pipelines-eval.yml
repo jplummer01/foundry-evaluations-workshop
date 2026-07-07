@@ -1,0 +1,41 @@
+# Evaluation as a merge/deploy gate in Azure DevOps.
+# Requires the "AI Agent Evaluation" extension installed in your ADO org
+# and an ARM service connection (Entra ID auth - no keys in the pipeline).
+#
+# The pipeline summary reports per-metric scores with confidence intervals,
+# and a pairwise statistical comparison when multiple agent versions are
+# evaluated - i.e. it tells you whether a difference is meaningful or noise.
+#
+# Suggested gating policy:
+#   - safety evaluators (e.g. builtin.violence) -> hard gates
+#   - quality evaluators -> regression-vs-baseline gates
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  # Define these as pipeline variables or in a variable group:
+  # AzureAIProjectEndpoint, DeploymentName (judge model), AgentIds
+
+steps:
+  # Authenticate with Entra ID via the ARM service connection first
+  - task: AzureCLI@2
+    displayName: "Azure login (Entra ID)"
+    inputs:
+      azureSubscription: "<your-arm-service-connection>"
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: az account show
+
+  - task: AIAgentEvaluation@2
+    displayName: "Evaluate AI Agents"
+    inputs:
+      azure-ai-project-endpoint: "$(AzureAIProjectEndpoint)"
+      deployment-name: "$(DeploymentName)"
+      data-path: "$(System.DefaultWorkingDirectory)/examples/eval-gate-dataset.json"
+      agent-ids: "$(AgentIds)"

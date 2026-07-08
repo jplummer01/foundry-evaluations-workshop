@@ -9,9 +9,15 @@ Pattern (stable even as parameter names evolve):
 
 Data-mapping syntax (the concept this lab exists to teach):
   {{item.X}}              -> a field from your test data, e.g. {{item.query}}
-  {{sample.output_items}} -> the FULL agent response, including tool calls
+  {{sample.output_items}} -> the FULL agent/model response including tool calls
   {{sample.output_text}}  -> just the response message text
+
+Usage:
+  python run_cloud_eval.py                                   # weather agent, dataset.jsonl
+  python run_cloud_eval.py --dataset dataset_gxp_sample.jsonl \
+      --agent-name demo-sop-agent --run-name gxp-sample-run  # GxP variant
 """
+import argparse
 import os
 import time
 from pathlib import Path
@@ -22,18 +28,30 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+parser = argparse.ArgumentParser(description="Run a cloud evaluation against a live agent.")
+parser.add_argument("--dataset", default="dataset.jsonl",
+                    help="JSONL dataset file in this directory (default: dataset.jsonl)")
+parser.add_argument("--agent-name", default=os.environ.get("DEMO_AGENT_NAME", "demo-weather-agent"),
+                    help="Agent to evaluate (default: DEMO_AGENT_NAME env var or demo-weather-agent)")
+parser.add_argument("--agent-version", default=os.environ.get("DEMO_AGENT_VERSION"),
+                    help="Agent version (default: DEMO_AGENT_VERSION env var; omit for latest)")
+parser.add_argument("--run-name", default="workshop-run", help="Name for the evaluation run")
+args = parser.parse_args()
+
 ENDPOINT = os.environ["FOUNDRY_PROJECT_ENDPOINT"]
 JUDGE = os.environ["FOUNDRY_JUDGE_DEPLOYMENT"]
-AGENT_NAME = os.environ.get("DEMO_AGENT_NAME", "demo-weather-agent")
-AGENT_VERSION = os.environ.get("DEMO_AGENT_VERSION")  # optional; None = latest
-DATASET_PATH = Path(__file__).parent / "dataset.jsonl"
+AGENT_NAME = args.agent_name
+AGENT_VERSION = args.agent_version
+DATASET_PATH = Path(__file__).parent / args.dataset
+if not DATASET_PATH.exists():
+    raise SystemExit(f"Dataset not found: {DATASET_PATH}")
 
 project_client = AIProjectClient(endpoint=ENDPOINT, credential=DefaultAzureCredential())
 client = project_client.get_openai_client()
 
 # --- 1. Upload the dataset -----------------------------------------------------
 dataset = project_client.datasets.upload_file(
-    name="weather-agent-eval-data",
+    name=f"{AGENT_NAME}-eval-data",
     version="1",
     file_path=str(DATASET_PATH),
 )
@@ -80,7 +98,7 @@ testing_criteria = [
 
 # --- 3. Evaluation definition ---------------------------------------------------
 evaluation = client.evals.create(
-    name="Weather Agent - Workshop Lab 2A",
+    name=f"{AGENT_NAME} - Workshop Lab 2A",
     data_source_config={
         "type": "azure_ai_source",
         "scenario": "responses",  # agent response evaluation
@@ -96,7 +114,7 @@ if AGENT_VERSION:
 
 eval_run = client.evals.runs.create(
     eval_id=evaluation.id,
-    name="workshop-run",
+    name=args.run_name,
     data_source={
         "type": "azure_ai_target_completions",
         "source": {"type": "file_id", "id": dataset.id},

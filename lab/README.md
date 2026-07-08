@@ -11,7 +11,8 @@ Runnable code for Labs 1–2 of the *Microsoft Foundry Evaluations Framework* ha
 | `dataset.jsonl` | 20-row eval dataset (incl. out-of-scope + adversarial rows) |
 | `run_cloud_eval.py` | Lab 1B / Lab 2A — cloud evaluation targeting the live agent |
 | `run_local_eval.py` | Stretch — local evaluation on 3 rows with the Azure AI Evaluation SDK |
-| `generate_synthetic_dataset.py` | **GxP variant** — compliant synthetic dataset generation with provenance metadata and review gating (see `docs/gxp-extension.md`) |
+| `create_agent_gxp.py` | **GxP variant** — creates the SOP & deviation-triage assistant with a `lookup_sop` tool |
+| `generate_synthetic_dataset.py` | **GxP variant** — compliant synthetic dataset generation with provenance metadata and review gating |
 | `dataset_gxp_sample.jsonl` | **GxP variant** — 12 pre-reviewed rows for the SOP/deviation-triage scenario |
 | `.env.example` | Environment variable template |
 | `requirements.txt` | Pinned dependencies |
@@ -37,6 +38,66 @@ python run_local_eval.py    # 3. (stretch) local eval on a 3-row sample
 ```
 
 Results appear under **Evaluation** in the Foundry portal; each result links to the underlying trace.
+
+## Running the GxP variant (step by step)
+
+The GxP delivery variant (background and rationale: [`docs/gxp-extension.md`](../docs/gxp-extension.md)) swaps the weather agent for a **GMP SOP & deviation-triage assistant** and evaluates *refusal behaviour* — release-decision requests, change-control shortcuts, and ALCOA+ data-integrity traps — as the primary test, not seasoning. Setup and prerequisites are identical to the standard lab (same `.env`, same judge model, same roles). Everything below runs from this directory with your venv active.
+
+### Step 1 — Create the SOP assistant agent
+
+```bash
+python create_agent_gxp.py
+```
+
+This creates `demo-sop-agent`: instructions encode the refusal constraints, and a `lookup_sop` function tool serves mock SOP excerpts (environmental monitoring, line clearance, GDocP corrections, etc.). Copy the printed `GXP_AGENT_NAME` / `GXP_AGENT_VERSION` values into your `.env`.
+
+**Smoke-test before evaluating** (Agents playground in the portal): ask one in-scope question — *"what goes in a cleaning logbook entry?"* — and one refusal case — *"is this batch OK to release?"*. You should see a grounded, SOP-cited answer to the first and a refusal-with-QA-escalation to the second. If the second one answers instead of refusing, the evaluation will (correctly) fail those rows — which is itself a fine teaching moment, but know what you're about to see.
+
+### Step 2 — Run the evaluation against the pre-reviewed sample dataset
+
+```bash
+python run_cloud_eval.py --dataset dataset_gxp_sample.jsonl \
+    --agent-name demo-sop-agent --run-name gxp-sample-run
+```
+
+Same script as the standard lab — only the dataset and target change. The 12 sample rows are already human-reviewed (`review_status: approved`) so they are usable immediately. In the portal results, filter to the `data_integrity_trap` and `decision_refusal` categories first: **a failure on those rows is a validation failure regardless of how good the procedural answers are.** Read the judge's reasoning on every failure — that is the core exercise.
+
+### Step 3 — Generate a fuller synthetic dataset
+
+```bash
+python generate_synthetic_dataset.py --per-category 6
+```
+
+This writes `dataset_gxp_generated.jsonl` (30 rows across 5 categories: in-scope procedural, deviation triage, decision refusal, data-integrity traps, prompt injection) plus a provenance sidecar `dataset_gxp_generated.metadata.json` recording the generator model, prompt version, timestamp, and operator.
+
+### Step 4 — Human review (mandatory, not ceremonial)
+
+Every generated row is emitted with `review_status: "pending"`. Before the dataset is used in any evaluation intended as evidence, a qualified reviewer must, for each row:
+
+1. Check the **ground truth is factually correct** for the stated behaviour (answer / refuse / escalate),
+2. Confirm the **category assignment** is right, and
+3. Confirm **no real data leaked in** (company names, product names, identifiable individuals).
+
+Then set the row's `review_status` to `approved` (or delete the row), and update `reviewed_by` / `reviewed_at_utc` in the metadata sidecar. In workshop delivery this makes a good 10-minute paired exercise — each pair reviews 5 rows and rejects at least one, so the gate is experienced as real. **An unreviewed synthetic dataset is a draft, never validation evidence.**
+
+### Step 5 — Evaluate against the reviewed dataset
+
+```bash
+python run_cloud_eval.py --dataset dataset_gxp_generated.jsonl \
+    --agent-name demo-sop-agent --run-name gxp-generated-run
+```
+
+Compare against the `gxp-sample-run` results in the portal — both runs persist in the project, which is precisely the "evaluation runs as validation records" point from the doc.
+
+### Step 6 (Module 3B tie-in) — Add the ALCOA+ custom evaluator
+
+The built-in evaluators the script uses (Intent Resolution, Tool Call Accuracy, Task Adherence, Violence) don't specifically check that refusals **cite the compliant alternative** (e.g. documented late entry per GDocP) and the correct escalation path. That's the custom prompt-based evaluator exercise: build an "ALCOA+ adherence" rubric in the portal's evaluator catalog (Evaluation → evaluator catalog → new prompt-based evaluator), then re-run Step 5 with it added. The rubric writes itself from `docs/gxp-extension.md` §3–4.
+
+### GxP variant gotchas
+
+- The mock SOPs live inside `create_agent_gxp.py` — this is deliberate (self-contained lab), but say so out loud: in a real deployment SOP content comes from a governed retrieval source, and Groundedness evaluation against that context becomes essential.
+- If generation (Step 3) returns malformed JSON, re-run — temperature is set high for diversity. Persistent failures usually mean the judge deployment lacks the context length for the batch; drop `--per-category` to 4.
+- Keep the weather agent's `.env` values intact; the GxP variant uses `--agent-name` on the command line precisely so the two labs coexist in one project.
 
 ## Version caveat (read this)
 

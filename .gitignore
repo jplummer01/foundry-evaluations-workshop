@@ -17,4 +17,5 @@ myevalresults.json
 Thumbs.db
 .vscode/
 .idea/
-*.patchslides/slide-review-prompt.md
+*.patch
+slides/slide-review-prompt.md

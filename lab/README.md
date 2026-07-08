@@ -11,6 +11,8 @@ Runnable code for Labs 1–2 of the *Microsoft Foundry Evaluations Framework* ha
 | `dataset.jsonl` | 20-row eval dataset (incl. out-of-scope + adversarial rows) |
 | `run_cloud_eval.py` | Lab 1B / Lab 2A — cloud evaluation targeting the live agent |
 | `run_local_eval.py` | Stretch — local evaluation on 3 rows with the Azure AI Evaluation SDK |
+| `generate_synthetic_dataset.py` | **GxP variant** — compliant synthetic dataset generation with provenance metadata and review gating (see `docs/gxp-extension.md`) |
+| `dataset_gxp_sample.jsonl` | **GxP variant** — 12 pre-reviewed rows for the SOP/deviation-triage scenario |
 | `.env.example` | Environment variable template |
 | `requirements.txt` | Pinned dependencies |
 

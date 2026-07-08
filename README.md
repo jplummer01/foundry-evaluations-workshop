@@ -19,6 +19,8 @@ A complete, ready-to-deliver workshop on evaluating AI agents in production with
 
 As an applied case study, [`docs/model-deprecation-strategy.md`](docs/model-deprecation-strategy.md) shows how the same evaluation machinery de-risks **LLM deprecation and migration** — eval harness, shadow traffic via trace-based evaluation, canary rollout with evaluation-driven rollback, and a promotion decision gate.
 
+For pharmaceutical / life-sciences audiences, [`docs/gxp-extension.md`](docs/gxp-extension.md) reframes the workshop for **GxP-regulated environments**: evaluation runs as validation evidence against the FDA/EMA AI credibility framework and GAMP 5, a compliant synthetic-dataset generation workflow (`lab/generate_synthetic_dataset.py`), and an SOP/deviation-triage lab scenario where refusal and ALCOA+ data-integrity behaviours are the main event.
+
 ## Repository structure
 
 ```
@@ -29,8 +31,10 @@ foundry-evaluations-workshop/
 ├── docs/
 │   ├── facilitator-guide.md     ← full facilitator guide: agenda, talk tracks,
 │   │                               lab walkthroughs, timing flex, appendices
-│   └── model-deprecation-strategy.md   ← applying the evaluation strategy to
-│                                          LLM deprecation & migration
+│   ├── model-deprecation-strategy.md   ← applying the evaluation strategy to
+│   │                                      LLM deprecation & migration
+│   └── gxp-extension.md         ← pharma GxP delivery variant: evaluations as
+│                                   validation evidence, synthetic datasets
 ├── slides/
 │   └── foundry-evals-workshop-deck.pptx   ← 16 slides with speaker notes
 ├── lab/
@@ -41,7 +45,10 @@ foundry-evaluations-workshop/
 │   ├── create_agent.py          ← demo weather agent (2 function tools)
 │   ├── dataset.jsonl            ← 20-row eval dataset incl. adversarial rows
 │   ├── run_cloud_eval.py        ← Lab 1B / 2A: cloud evaluation vs. live agent
-│   └── run_local_eval.py        ← stretch: local eval with azure-ai-evaluation
+│   ├── run_local_eval.py        ← stretch: local eval with azure-ai-evaluation
+│   ├── generate_synthetic_dataset.py  ← GxP variant: compliant synthetic
+│   │                                     dataset generation with provenance
+│   └── dataset_gxp_sample.jsonl ← GxP variant: 12 pre-reviewed sample rows
 └── examples/
     ├── azure-pipelines-eval.yml     ← evaluation as an Azure DevOps gate
     └── github-actions-eval.yml      ← evaluation as a GitHub Actions gate

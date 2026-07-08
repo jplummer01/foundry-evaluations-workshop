@@ -42,6 +42,14 @@ jobs:
           pip install -r lab/requirements.txt
           python lab/run_cloud_eval.py
 
+      # Discipline note (GxP tracks — see docs/gxp-disciplines.md): the same step
+      # gates any agent. Point vars.AGENT_NAME at the discipline agent (e.g.
+      # demo-gmp-agent / demo-lab-agent / demo-clinical-agent / demo-distribution-agent)
+      # and pass its dataset, e.g.:
+      #   python lab/run_cloud_eval.py --dataset lab/dataset_glp_sample.jsonl \
+      #     --agent-name "${{ vars.AGENT_NAME }}" --run-name ci-glp
+      # Variable names match lab/.env.example so the fallback path stays runnable.
+
       # NOTE: as written, run_cloud_eval.py submits the run and polls to completion
       # but exits 0 regardless of per-row scores - it is a "run the eval" step, not
       # yet an enforcing gate. To make this block a merge, extend the script (or add

@@ -355,3 +355,18 @@ Position evaluation among its neighbours so architects leave with the full map:
 - **Running short / advanced room?** Add the local-vs-cloud comparison stretch, or a live red-team scenario (`"scenario": "red_team"`) demo.
 - **90-minute cut-down version:** Module 1 (compressed to 25 min) + Lab 1 Part A only (25 min) + Module 4 (30 min) + wrap (10 min).
 - **Leadership variant:** drop both labs, expand 4.3 into a 30-minute governance architecture discussion, demo results dashboards only.
+
+# Appendix C — GxP delivery variant (pharma / life sciences)
+
+For pharmaceutical / life-sciences audiences, deliver the workshop as the **GxP variant**, where evaluation results are framed as **validation evidence** rather than engineering hygiene. Rationale, regulatory anchors, and agenda deltas are in [`gxp-extension.md`](gxp-extension.md).
+
+The GxP labs come in **four discipline tracks** — pick the one matching the room (mapped in [`gxp-disciplines.md`](gxp-disciplines.md)):
+
+| Discipline | Covers | Agent | Sample dataset |
+|---|---|---|---|
+| **GMP** | Manufacturing quality systems | `create_agent_gmp.py` (`demo-gmp-agent`) | `dataset_gmp_sample.jsonl` |
+| **GLP** | Laboratory / product testing | `create_agent_glp.py` (`demo-lab-agent`) | `dataset_glp_sample.jsonl` |
+| **GCP** | Clinical studies | `create_agent_gcp.py` (`demo-clinical-agent`) | `dataset_gcp_sample.jsonl` |
+| **GDP** | Supply chain & distribution | `create_agent_gdp.py` (`demo-distribution-agent`) | `dataset_gdp_sample.jsonl` |
+
+All four use the *same* `run_cloud_eval.py`, evaluator set, and five-category matrix (`in_scope_procedural`, a discipline `*_triage` category, `decision_refusal`, `data_integrity_trap`, `prompt_injection`) — only the scenario and refusal behaviours change. In every track, the **refusal and ALCOA+ data-integrity rows are the main event**, and the core exercise is *read the judge's reasoning on every refusal failure*. Timing flex (Appendix B) applies unchanged; a single discipline track fits the same lab slots as the standard weather lab.

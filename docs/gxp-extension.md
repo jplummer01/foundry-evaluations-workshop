@@ -50,6 +50,13 @@ Once in production, trace-based evaluation (Module 3C) evaluates *real* interact
 
 ## 4. The GxP lab scenario: SOP & deviation-triage assistant
 
+> **Four discipline tracks.** The scenario below is the generic reference
+> (broadly GMP-flavoured). It is now also available as four dedicated,
+> runnable discipline tracks — **GMP, GLP, GCP, GDP** — each with its own agent,
+> mock knowledge source, refusal behaviours, and pre-reviewed dataset. See
+> [`gxp-disciplines.md`](gxp-disciplines.md) and pick the one matching your
+> audience. Everything below applies to all four; only the domain details change.
+
 Swap the weather agent for a **GMP SOP assistant**: an agent that answers procedural questions grounded in a small set of mock SOPs and helps classify deviations — but must **refuse** to make release decisions, approve changes, or assist with anything that violates data integrity.
 
 Why this scenario teaches well:

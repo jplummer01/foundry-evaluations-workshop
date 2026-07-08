@@ -82,6 +82,19 @@ Two things to hold onto in this track:
 
 Full step-by-step, including the custom ALCOA+ evaluator exercise, is in [`../lab/README.md`](../lab/README.md).
 
+### Pick a GxP discipline
+
+The GxP variant also ships as **four discipline tracks** — GMP (manufacturing), GLP (lab/product testing), GCP (clinical studies), GDP (supply chain/distribution) — mapped in [`gxp-disciplines.md`](gxp-disciplines.md). Same run order as above; just swap the create script, `--dataset`, and `--agent-name`:
+
+| Discipline | Create script | `--dataset` | `--agent-name` |
+|---|---|---|---|
+| GMP | `create_agent_gmp.py` | `dataset_gmp_sample.jsonl` | `demo-gmp-agent` |
+| GLP | `create_agent_glp.py` | `dataset_glp_sample.jsonl` | `demo-lab-agent` |
+| GCP | `create_agent_gcp.py` | `dataset_gcp_sample.jsonl` | `demo-clinical-agent` |
+| GDP | `create_agent_gdp.py` | `dataset_gdp_sample.jsonl` | `demo-distribution-agent` |
+
+For the synthetic step, pass `--discipline {gmp,glp,gcp,gdp}` to `generate_synthetic_dataset.py`. The "read the judge's reasoning on every refusal failure" exercise is the same in every track.
+
 ## Troubleshooting
 
 Use the canonical tables rather than guessing — the top offenders and fixes are in the repo **[README "Common failures"](../README.md#common-failures-labs)** and **[`lab/README.md`](../lab/README.md#common-failures)**. The usual suspects:

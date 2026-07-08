@@ -39,3 +39,9 @@ steps:
       deployment-name: "$(DeploymentName)"
       data-path: "$(System.DefaultWorkingDirectory)/examples/eval-gate-dataset.json"
       agent-ids: "$(AgentIds)"
+
+  # Discipline note (GxP tracks — see docs/gxp-disciplines.md): to gate a GxP
+  # discipline agent instead, point AgentIds at that agent and swap data-path to
+  # examples/eval-gate-dataset-gxp.json (or a per-discipline gate dataset built
+  # from lab/dataset_<discipline>_sample.jsonl). Keep safety evaluators as hard
+  # gates and quality evaluators as regression-vs-baseline gates for every track.

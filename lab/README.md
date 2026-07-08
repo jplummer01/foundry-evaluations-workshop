@@ -11,9 +11,14 @@ Runnable code for Labs 1–2 of the *Microsoft Foundry Evaluations Framework* ha
 | `dataset.jsonl` | 20-row eval dataset (incl. out-of-scope + adversarial rows) |
 | `run_cloud_eval.py` | Lab 1B / Lab 2A — cloud evaluation targeting the live agent |
 | `run_local_eval.py` | Stretch — local evaluation on 3 rows with the Azure AI Evaluation SDK |
-| `create_agent_gxp.py` | **GxP variant** — creates the SOP & deviation-triage assistant with a `lookup_sop` tool |
-| `generate_synthetic_dataset.py` | **GxP variant** — compliant synthetic dataset generation with provenance metadata and review gating |
-| `dataset_gxp_sample.jsonl` | **GxP variant** — 12 pre-reviewed rows for the SOP/deviation-triage scenario |
+| `create_agent_gxp.py` | **GxP variant** — creates the SOP & deviation-triage assistant with a `lookup_sop` tool (generic reference) |
+| `create_agent_gmp.py` | **GxP discipline: GMP** — manufacturing SOP/deviation agent (`demo-gmp-agent`) |
+| `create_agent_glp.py` | **GxP discipline: GLP** — lab / product-testing agent with a `lookup_method` tool (`demo-lab-agent`) |
+| `create_agent_gcp.py` | **GxP discipline: GCP** — clinical-study coordinator agent with a `lookup_protocol` tool (`demo-clinical-agent`) |
+| `create_agent_gdp.py` | **GxP discipline: GDP** — distribution / cold-chain agent with a `lookup_dist_sop` tool (`demo-distribution-agent`) |
+| `generate_synthetic_dataset.py` | **GxP variant** — compliant synthetic dataset generation (`--discipline {gmp,glp,gcp,gdp}`) with provenance metadata and review gating |
+| `dataset_gxp_sample.jsonl` | **GxP variant** — 12 pre-reviewed rows for the generic SOP/deviation-triage scenario |
+| `dataset_gmp_sample.jsonl` / `dataset_glp_sample.jsonl` / `dataset_gcp_sample.jsonl` / `dataset_gdp_sample.jsonl` | **GxP disciplines** — 12 pre-reviewed rows each (GMP / GLP / GCP / GDP) |
 | `.env.example` | Environment variable template |
 | `requirements.txt` | Pinned dependencies |
 
@@ -98,6 +103,36 @@ The built-in evaluators the script uses (Intent Resolution, Tool Call Accuracy, 
 - The mock SOPs live inside `create_agent_gxp.py` — this is deliberate (self-contained lab), but say so out loud: in a real deployment SOP content comes from a governed retrieval source, and Groundedness evaluation against that context becomes essential.
 - If generation (Step 3) returns malformed JSON, re-run — temperature is set high for diversity. Persistent failures usually mean the judge deployment lacks the context length for the batch; drop `--per-category` to 4.
 - Keep the weather agent's `.env` values intact; the GxP variant uses `--agent-name` on the command line precisely so the two labs coexist in one project.
+
+## The four GxP discipline tracks
+
+The GxP variant above is the generic reference. It is also available as **four
+dedicated discipline tracks** — GMP (manufacturing), GLP (lab/product testing),
+GCP (clinical studies), GDP (supply chain/distribution) — mapped in
+[`docs/gxp-disciplines.md`](../docs/gxp-disciplines.md). Same machinery, same
+evaluator set, same five-category matrix; only the agent scenario, mock knowledge
+source, and discipline-specific refusals differ. All agents coexist in one
+project because `run_cloud_eval.py` targets one via `--agent-name`.
+
+| Discipline | Create | Agent name | Sample dataset | Triage category |
+|---|---|---|---|---|
+| GMP | `create_agent_gmp.py` | `demo-gmp-agent` | `dataset_gmp_sample.jsonl` | `deviation_triage` |
+| GLP | `create_agent_glp.py` | `demo-lab-agent` | `dataset_glp_sample.jsonl` | `oos_oot_triage` |
+| GCP | `create_agent_gcp.py` | `demo-clinical-agent` | `dataset_gcp_sample.jsonl` | `ae_safety_triage` |
+| GDP | `create_agent_gdp.py` | `demo-distribution-agent` | `dataset_gdp_sample.jsonl` | `excursion_triage` |
+
+Run any track with the same three steps (GLP shown):
+
+```bash
+python create_agent_glp.py                                   # copy printed NAME/VERSION into .env
+python run_cloud_eval.py --dataset dataset_glp_sample.jsonl \
+    --agent-name demo-lab-agent --run-name glp-sample-run    # 12 pre-reviewed rows
+python generate_synthetic_dataset.py --discipline glp --per-category 6  # then human-review to 'approved'
+```
+
+The synthetic generator writes `dataset_<discipline>_generated.jsonl` plus a
+provenance sidecar and marks every row `review_status: pending` — the human-review
+gate from `docs/gxp-extension.md` §3 applies to all disciplines equally.
 
 ## Version caveat (read this)
 

@@ -17,4 +17,4 @@ myevalresults.json
 Thumbs.db
 .vscode/
 .idea/
-.patch
+*.patch

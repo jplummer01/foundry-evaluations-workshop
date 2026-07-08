@@ -38,7 +38,7 @@ foundry-evaluations-workshop/
 │   │                               validation evidence, synthetic datasets
 │   └── gxp-disciplines.md       ← four GxP discipline tracks: GMP / GLP / GCP / GDP
 ├── slides/
-│   └── foundry-evals-workshop-deck.pptx   ← 16 slides with speaker notes
+│   └── foundry-evals-workshop-deck.pptx   ← 21 slides with speaker notes
 ├── lab/
 │   ├── README.md                ← lab setup and run order
 │   ├── requirements.txt

@@ -31,6 +31,7 @@ foundry-evaluations-workshop/
 ├── docs/
 │   ├── facilitator-guide.md     ← full facilitator guide: agenda, talk tracks,
 │   │                               lab walkthroughs, timing flex, appendices
+│   ├── attendee-guide.md        ← self-paced learner walkthrough (weather + GxP)
 │   ├── model-deprecation-strategy.md   ← applying the evaluation strategy to
 │   │                                      LLM deprecation & migration
 │   └── gxp-extension.md         ← pharma GxP delivery variant: evaluations as
@@ -64,6 +65,8 @@ foundry-evaluations-workshop/
 
 ### Self-paced learners
 
+Working through the labs on your own? Start with the **[attendee guide](docs/attendee-guide.md)** — a self-paced walkthrough covering both the weather and GxP tracks. The short version:
+
 ```bash
 git clone https://github.com/<you>/foundry-evaluations-workshop.git
 cd foundry-evaluations-workshop/lab
@@ -76,7 +79,7 @@ python create_agent.py    # creates the demo weather agent
 python run_cloud_eval.py  # submits an evaluation and polls to completion
 ```
 
-Then open **Evaluation** in the Foundry portal, find a failing row, and read the judge's reasoning — that's the core exercise. Follow along with `docs/facilitator-guide.md` Modules 1–4 for the concepts.
+Then open **Evaluation** in the Foundry portal, find a failing row, and read the judge's reasoning — that's the core exercise. Follow along with [`docs/attendee-guide.md`](docs/attendee-guide.md) or `docs/facilitator-guide.md` Modules 1–4 for the concepts.
 
 ## Prerequisites
 

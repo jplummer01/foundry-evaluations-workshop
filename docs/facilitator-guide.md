@@ -5,6 +5,8 @@
 **Format:** Instructor-led with hands-on labs (portal + SDK), architecture discussion, and a governance/CI-CD module
 **Last content review:** July 2026 (post-Build 2026 — includes trace-based evaluation, Rubric evaluator, and Agent Optimizer)
 
+> **Delivering vs. self-paced:** this is the facilitator's delivery guide. Attendees working through the labs on their own should follow [`attendee-guide.md`](attendee-guide.md), which mirrors these modules in a self-paced form.
+
 ---
 
 ## Workshop Narrative

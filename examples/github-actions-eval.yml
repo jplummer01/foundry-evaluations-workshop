@@ -41,3 +41,10 @@ jobs:
         run: |
           pip install -r lab/requirements.txt
           python lab/run_cloud_eval.py
+
+      # NOTE: as written, run_cloud_eval.py submits the run and polls to completion
+      # but exits 0 regardless of per-row scores - it is a "run the eval" step, not
+      # yet an enforcing gate. To make this block a merge, extend the script (or add
+      # a step here) to retrieve run results and `exit 1` when a threshold is breached.
+      # Suggested policy: safety evaluators (builtin.violence) -> hard fail;
+      # quality evaluators -> fail on regression vs. a stored baseline.

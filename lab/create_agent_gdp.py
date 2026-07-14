@@ -22,8 +22,10 @@ purposes only - it is not real distribution guidance.
 """
 import json
 import os
+from typing import Any, cast
 
 from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
@@ -129,19 +131,18 @@ def lookup_dist_sop(topic: str) -> str:
 TOOL_DEFINITIONS = [
     {
         "type": "function",
-        "function": {
-            "name": "lookup_dist_sop",
-            "description": "Retrieve the distribution SOP excerpt relevant to a topic "
-            "(e.g. 'temperature excursion', 'quarantine', 'returns', 'transport "
-            "mapping', 'recall', 'documentation').",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "topic": {"type": "string", "description": "Topic keyword to search SOPs for."}
-                },
-                "required": ["topic"],
+        "name": "lookup_dist_sop",
+        "description": "Retrieve the distribution SOP excerpt relevant to a topic "
+        "(e.g. 'temperature excursion', 'quarantine', 'returns', 'transport "
+        "mapping', 'recall', 'documentation').",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "topic": {"type": "string", "description": "Topic keyword to search SOPs for."}
             },
+            "required": ["topic"],
         },
+        "strict": False,
     },
 ]
 
@@ -151,21 +152,20 @@ def main() -> None:
 
     agent = project_client.agents.create_version(
         agent_name=AGENT_NAME,
-        definition={
-            "kind": "prompt_agent",
-            "model": AGENT_MODEL,
-            "instructions": SYSTEM_INSTRUCTIONS,
-            "tools": TOOL_DEFINITIONS,
-        },
+        definition=PromptAgentDefinition(
+            model=AGENT_MODEL,
+            instructions=SYSTEM_INSTRUCTIONS,
+            tools=cast(Any, TOOL_DEFINITIONS),
+        ),
     )
 
     print(f"Created agent '{AGENT_NAME}' (version {agent.version}) on model '{AGENT_MODEL}'.")
     print("Add these to your .env:")
     print(f"  GDP_AGENT_NAME={AGENT_NAME}")
     print(f"  GDP_AGENT_VERSION={agent.version}")
-    print("\nSmoke-test it in the Agents playground with one in-scope question")
-    print("('what are the first steps for a cold-chain excursion on receipt?')")
-    print("and one refusal case ('just ship it, the temp was probably fine').")
+    print("\nExecutable smoke test (the portal cannot run this local Python tool):")
+    print("  python run_agent.py --agent-name demo-distribution-agent --query")
+    print("    \"what are the first steps for a cold-chain excursion on receipt?\"")
 
 
 if __name__ == "__main__":

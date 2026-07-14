@@ -199,33 +199,24 @@ testing_criteria = [
 
 **Goal:** evaluate the pre-deployed demo agent end-to-end (system + process evaluators), register one custom evaluator, and see trace-based evaluation run against real interactions.
 
-## Part A — Evaluate a live agent (20 min)
+## Part A — Execute and evaluate a prompt agent (20 min)
 
-Point a cloud evaluation at the demo agent using the `azure_ai_target_completions` data source — the service sends each test query to the agent, captures the full response (including tool calls), and scores it:
+The demo is a prompt agent: Foundry stores its instructions and function schemas, while the
+workshop's deterministic Python function implementations stay on the client. The portal and a
+service-side live target can display a custom function call, but cannot execute that local code.
+Run the complete Responses API tool loop first, then submit the resulting `item` / `sample` JSONL
+for cloud scoring:
 
-```python
-eval_run = client.evals.runs.create(
-    eval_id=evaluation.id,
-    name="Agent Evaluation Run",
-    data_source={
-        "type": "azure_ai_target_completions",
-        "source": {"type": "file_id", "id": dataset.id},
-        "input_messages": {
-            "type": "template",
-            "template": [{
-                "type": "message",
-                "role": "user",
-                "content": {"type": "input_text", "text": "{{item.query}}"},
-            }],
-        },
-        "target": {
-            "type": "azure_ai_agent",
-            "name": "demo-weather-agent",
-            "version": "1",   # optional; omit for latest
-        },
-    },
-)
+```bash
+python run_agent.py --dataset dataset.jsonl --output responses.jsonl
+python run_cloud_eval.py --precomputed --dataset responses.jsonl
 ```
+
+Use `python run_agent.py --query "What's the weather in Truro?"` to demonstrate the loop: the
+client receives a `function_call`, executes the matching local handler, returns a
+`function_call_output` with the same call ID, and repeats until the model emits final text.
+`run_cloud_eval.py` retains a live-target mode for comparison, but warn attendees that it cannot
+produce complete answers for these local custom functions.
 
 Evaluator set for this lab — one system, two process:
 - `builtin.intent_resolution` (system: did it understand the ask?)

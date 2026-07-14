@@ -46,9 +46,15 @@ Fill in `.env`:
 ```bash
 python check_setup.py     # 0. every line must print [OK] before you continue
 python create_agent.py    # 1. creates 'demo-weather-agent' (two mock tools)
-python run_cloud_eval.py  # 2. uploads dataset.jsonl, submits the eval, polls to completion
-python run_local_eval.py  # 3. (stretch) local eval on a 3-row sample
+python run_agent.py --dataset dataset.jsonl --output responses.jsonl
+python run_cloud_eval.py --precomputed --dataset responses.jsonl
+python run_local_eval.py  # 4. (stretch) local eval on a 3-row sample
 ```
+
+The prompt agent stores the function schemas, while `run_agent.py` executes the local Python
+implementations and returns their outputs to the model. The portal playground can show a function
+call but cannot execute this local code. For a one-question smoke test, use
+`python run_agent.py --query "What's the weather in Truro?"`.
 
 The weather agent answers UK weather questions via `get_weather` / `get_forecast` and is *meant* to decline out-of-scope and adversarial requests — `dataset.jsonl` (20 rows) deliberately includes those so the abstention and safety evaluators have something to catch.
 
@@ -65,13 +71,17 @@ The GxP track (rationale in [`gxp-extension.md`](gxp-extension.md)) swaps in a *
 ```bash
 python create_agent_gxp.py                                   # creates 'demo-sop-agent'; copy printed name/version into .env
 
-python run_cloud_eval.py --dataset dataset_gxp_sample.jsonl \
-    --agent-name demo-sop-agent --run-name gxp-sample-run    # 12 pre-reviewed rows
+python run_agent.py --dataset dataset_gxp_sample.jsonl --output responses_gxp.jsonl \
+    --agent-name demo-sop-agent
+python run_cloud_eval.py --precomputed --dataset responses_gxp.jsonl \
+    --agent-name demo-sop-agent --run-name gxp-sample-run
 
 python generate_synthetic_dataset.py --per-category 6        # writes dataset_gxp_generated.jsonl + .metadata.json sidecar
 # --- mandatory human review: set each row's review_status to "approved" before using it as evidence ---
 
-python run_cloud_eval.py --dataset dataset_gxp_generated.jsonl \
+python run_agent.py --dataset dataset_gxp_generated.jsonl --output responses_gxp_generated.jsonl \
+    --agent-name demo-sop-agent
+python run_cloud_eval.py --precomputed --dataset responses_gxp_generated.jsonl \
     --agent-name demo-sop-agent --run-name gxp-generated-run
 ```
 

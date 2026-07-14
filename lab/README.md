@@ -8,8 +8,9 @@ Runnable code for Labs 1–2 of the *Microsoft Foundry Evaluations Framework* ha
 |---|---|
 | `check_setup.py` | Verifies auth, project connectivity, and judge model before the labs start |
 | `create_agent.py` | Creates the demo **weather agent** with two function tools |
+| `run_agent.py` | Executes prompt-agent function calls locally; supports one query or a JSONL batch |
 | `dataset.jsonl` | 20-row eval dataset (incl. out-of-scope + adversarial rows) |
-| `run_cloud_eval.py` | Lab 1B / Lab 2A — cloud evaluation targeting the live agent |
+| `run_cloud_eval.py` | Lab 1B / Lab 2A — cloud scoring of completed responses (`--precomputed`) or optional live target |
 | `run_local_eval.py` | Stretch — local evaluation on 3 rows with the Azure AI Evaluation SDK |
 | `create_agent_gxp.py` | **GxP variant** — creates the SOP & deviation-triage assistant with a `lookup_sop` tool (generic reference) |
 | `create_agent_gmp.py` | **GxP discipline: GMP** — manufacturing SOP/deviation agent (`demo-gmp-agent`) |
@@ -38,11 +39,15 @@ Required roles: **Foundry User** on the project (formerly *Azure AI User* — yo
 ```bash
 python check_setup.py       # 0. everything green before you start
 python create_agent.py      # 1. creates 'demo-weather-agent' in your project
-python run_cloud_eval.py    # 2. submits the cloud evaluation and polls to completion
-python run_local_eval.py    # 3. (stretch) local eval on a 3-row sample
+python run_agent.py --dataset dataset.jsonl --output responses.jsonl
+python run_cloud_eval.py --precomputed --dataset responses.jsonl
+python run_local_eval.py    # 4. (stretch) local eval on a 3-row sample
 ```
 
 Results appear under **Evaluation** in the Foundry portal; each result links to the underlying trace.
+Prompt agents store function schemas, not the local Python implementations. The portal can display a
+custom function call but cannot execute these workshop functions; use `run_agent.py --query "..."`
+for an executable smoke test. The live mode retained in `run_cloud_eval.py` has the same limitation.
 
 ## Running the GxP variant (step by step)
 
@@ -56,12 +61,14 @@ python create_agent_gxp.py
 
 This creates `demo-sop-agent`: instructions encode the refusal constraints, and a `lookup_sop` function tool serves mock SOP excerpts (environmental monitoring, line clearance, GDocP corrections, etc.). Copy the printed `GXP_AGENT_NAME` / `GXP_AGENT_VERSION` values into your `.env`.
 
-**Smoke-test before evaluating** (Agents playground in the portal): ask one in-scope question — *"what goes in a cleaning logbook entry?"* — and one refusal case — *"is this batch OK to release?"*. You should see a grounded, SOP-cited answer to the first and a refusal-with-QA-escalation to the second. If the second one answers instead of refusing, the evaluation will (correctly) fail those rows — which is itself a fine teaching moment, but know what you're about to see.
+**Smoke-test before evaluating** with `run_agent.py --agent-name demo-sop-agent --query "what goes in a cleaning logbook entry?"`, then repeat with *"is this batch OK to release?"*. You should see a grounded, SOP-cited answer to the first and a refusal-with-QA-escalation to the second.
 
 ### Step 2 — Run the evaluation against the pre-reviewed sample dataset
 
 ```bash
-python run_cloud_eval.py --dataset dataset_gxp_sample.jsonl \
+python run_agent.py --dataset dataset_gxp_sample.jsonl --output responses_gxp.jsonl \
+    --agent-name demo-sop-agent
+python run_cloud_eval.py --precomputed --dataset responses_gxp.jsonl \
     --agent-name demo-sop-agent --run-name gxp-sample-run
 ```
 
@@ -88,7 +95,9 @@ Then set the row's `review_status` to `approved` (or delete the row), and update
 ### Step 5 — Evaluate against the reviewed dataset
 
 ```bash
-python run_cloud_eval.py --dataset dataset_gxp_generated.jsonl \
+python run_agent.py --dataset dataset_gxp_generated.jsonl --output responses_gxp_generated.jsonl \
+    --agent-name demo-sop-agent
+python run_cloud_eval.py --precomputed --dataset responses_gxp_generated.jsonl \
     --agent-name demo-sop-agent --run-name gxp-generated-run
 ```
 
@@ -125,8 +134,10 @@ Run any track with the same three steps (GLP shown):
 
 ```bash
 python create_agent_glp.py                                   # copy printed NAME/VERSION into .env
-python run_cloud_eval.py --dataset dataset_glp_sample.jsonl \
-    --agent-name demo-lab-agent --run-name glp-sample-run    # 12 pre-reviewed rows
+python run_agent.py --dataset dataset_glp_sample.jsonl --output responses_glp.jsonl \
+    --agent-name demo-lab-agent
+python run_cloud_eval.py --precomputed --dataset responses_glp.jsonl \
+    --agent-name demo-lab-agent --run-name glp-sample-run
 python generate_synthetic_dataset.py --discipline glp --per-category 6  # then human-review to 'approved'
 ```
 
@@ -137,6 +148,8 @@ gate from `docs/gxp-extension.md` §3 applies to all disciplines equally.
 ## Version caveat (read this)
 
 The Foundry evaluations API surface is evolving quickly (the `client.evals.*` routes moved from preview toward GA through spring 2026, and `azure-ai-projects` has been consolidating agents/inference/evals into one package). These scripts target the **2.x `azure-ai-projects` line against the GA REST surface** and were checked against the docs in **July 2026**. If a call signature has drifted:
+
+For agent creation specifically, the current wire enum for a prompt agent in `create_version(..., definition=...)` is `kind: "prompt"`.
 
 1. `pip install --upgrade azure-ai-projects` and check the package changelog,
 2. compare against the current samples in the [evaluate-agent doc](https://learn.microsoft.com/azure/foundry/observability/how-to/evaluate-agent), and

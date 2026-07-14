@@ -45,8 +45,9 @@ foundry-evaluations-workshop/
 │   ├── .env.example
 │   ├── check_setup.py           ← pre-lab environment verification
 │   ├── create_agent.py          ← demo weather agent (2 function tools)
+│   ├── run_agent.py             ← executes local tools; writes completed responses
 │   ├── dataset.jsonl            ← 20-row eval dataset incl. adversarial rows
-│   ├── run_cloud_eval.py        ← Lab 1B / 2A: cloud evaluation vs. live agent
+│   ├── run_cloud_eval.py        ← Lab 1B / 2A: cloud scoring of completed responses
 │   ├── run_local_eval.py        ← stretch: local eval with azure-ai-evaluation
 │   ├── generate_synthetic_dataset.py  ← GxP variant: compliant synthetic
 │   │                                     dataset generation (--discipline)
@@ -79,7 +80,8 @@ cp .env.example .env      # fill in your project endpoint and deployments
 az login
 python check_setup.py     # everything should print [OK]
 python create_agent.py    # creates the demo weather agent
-python run_cloud_eval.py  # submits an evaluation and polls to completion
+python run_agent.py --dataset dataset.jsonl --output responses.jsonl
+python run_cloud_eval.py --precomputed --dataset responses.jsonl
 ```
 
 Then open **Evaluation** in the Foundry portal, find a failing row, and read the judge's reasoning — that's the core exercise. Follow along with [`docs/attendee-guide.md`](docs/attendee-guide.md) or `docs/facilitator-guide.md` Modules 1–4 for the concepts.

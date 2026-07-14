@@ -146,9 +146,11 @@ all agents can coexist in one project because `run_cloud_eval.py` targets one vi
 # 1. Create the discipline agent (copy the printed NAME/VERSION into .env)
 python create_agent_glp.py
 
-# 2. Evaluate against the pre-reviewed sample dataset
-python run_cloud_eval.py --dataset dataset_glp_sample.jsonl \
-    --agent-name demo-lab-agent --run-name glp-sample-run
+# 2. Execute local tools, then score the completed responses
+python run_agent.py --dataset dataset_glp_sample.jsonl --output responses_glp.jsonl \
+  --agent-name demo-lab-agent
+python run_cloud_eval.py --precomputed --dataset responses_glp.jsonl \
+  --agent-name demo-lab-agent --run-name glp-sample-run
 
 # 3. (optional) Generate a fuller synthetic dataset for this discipline
 python generate_synthetic_dataset.py --discipline glp --per-category 6
@@ -156,9 +158,11 @@ python generate_synthetic_dataset.py --discipline glp --per-category 6
 
 # 4. Human-review each row to 'approved' (mandatory gate — see gxp-extension.md §3)
 
-# 5. Re-run against the reviewed dataset and compare in the portal
-python run_cloud_eval.py --dataset dataset_glp_generated.jsonl \
-    --agent-name demo-lab-agent --run-name glp-generated-run
+# 5. Execute and score the reviewed dataset, then compare in the portal
+python run_agent.py --dataset dataset_glp_generated.jsonl --output responses_glp_generated.jsonl \
+  --agent-name demo-lab-agent
+python run_cloud_eval.py --precomputed --dataset responses_glp_generated.jsonl \
+  --agent-name demo-lab-agent --run-name glp-generated-run
 ```
 
 Swap `glp` / `demo-lab-agent` for `gmp` / `demo-gmp-agent`, `gcp` /

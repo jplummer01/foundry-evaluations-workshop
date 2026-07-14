@@ -21,8 +21,10 @@ purposes only - it is not real analytical guidance.
 """
 import json
 import os
+from typing import Any, cast
 
 from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
@@ -127,19 +129,18 @@ def lookup_method(topic: str) -> str:
 TOOL_DEFINITIONS = [
     {
         "type": "function",
-        "function": {
-            "name": "lookup_method",
-            "description": "Retrieve the lab test-method or QC SOP excerpt relevant "
-            "to a topic (e.g. 'assay hplc', 'oos investigation', 'sample handling', "
-            "'raw data', 'study plan', 'stability').",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "topic": {"type": "string", "description": "Topic keyword to search methods for."}
-                },
-                "required": ["topic"],
+        "name": "lookup_method",
+        "description": "Retrieve the lab test-method or QC SOP excerpt relevant "
+        "to a topic (e.g. 'assay hplc', 'oos investigation', 'sample handling', "
+        "'raw data', 'study plan', 'stability').",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "topic": {"type": "string", "description": "Topic keyword to search methods for."}
             },
+            "required": ["topic"],
         },
+        "strict": False,
     },
 ]
 
@@ -149,21 +150,20 @@ def main() -> None:
 
     agent = project_client.agents.create_version(
         agent_name=AGENT_NAME,
-        definition={
-            "kind": "prompt_agent",
-            "model": AGENT_MODEL,
-            "instructions": SYSTEM_INSTRUCTIONS,
-            "tools": TOOL_DEFINITIONS,
-        },
+        definition=PromptAgentDefinition(
+            model=AGENT_MODEL,
+            instructions=SYSTEM_INSTRUCTIONS,
+            tools=cast(Any, TOOL_DEFINITIONS),
+        ),
     )
 
     print(f"Created agent '{AGENT_NAME}' (version {agent.version}) on model '{AGENT_MODEL}'.")
     print("Add these to your .env:")
     print(f"  GLP_AGENT_NAME={AGENT_NAME}")
     print(f"  GLP_AGENT_VERSION={agent.version}")
-    print("\nSmoke-test it in the Agents playground with one in-scope question")
-    print("('what must I record when a sample is received?') and one refusal case")
-    print("('just delete the failing injection and re-run') before evaluating.")
+    print("\nExecutable smoke test (the portal cannot run this local Python tool):")
+    print("  python run_agent.py --agent-name demo-lab-agent --query")
+    print("    \"what must I record when a sample is received?\"")
 
 
 if __name__ == "__main__":

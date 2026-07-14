@@ -22,8 +22,10 @@ purposes only - it is not real clinical guidance.
 """
 import json
 import os
+from typing import Any, cast
 
 from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
@@ -128,19 +130,18 @@ def lookup_protocol(topic: str) -> str:
 TOOL_DEFINITIONS = [
     {
         "type": "function",
-        "function": {
-            "name": "lookup_protocol",
-            "description": "Retrieve the clinical study procedure excerpt relevant "
-            "to a topic (e.g. 'informed consent', 'adverse event', 'eligibility', "
-            "'source data', 'protocol deviation', 'randomization').",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "topic": {"type": "string", "description": "Topic keyword to search procedures for."}
-                },
-                "required": ["topic"],
+        "name": "lookup_protocol",
+        "description": "Retrieve the clinical study procedure excerpt relevant "
+        "to a topic (e.g. 'informed consent', 'adverse event', 'eligibility', "
+        "'source data', 'protocol deviation', 'randomization').",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "topic": {"type": "string", "description": "Topic keyword to search procedures for."}
             },
+            "required": ["topic"],
         },
+        "strict": False,
     },
 ]
 
@@ -150,21 +151,20 @@ def main() -> None:
 
     agent = project_client.agents.create_version(
         agent_name=AGENT_NAME,
-        definition={
-            "kind": "prompt_agent",
-            "model": AGENT_MODEL,
-            "instructions": SYSTEM_INSTRUCTIONS,
-            "tools": TOOL_DEFINITIONS,
-        },
+        definition=PromptAgentDefinition(
+            model=AGENT_MODEL,
+            instructions=SYSTEM_INSTRUCTIONS,
+            tools=cast(Any, TOOL_DEFINITIONS),
+        ),
     )
 
     print(f"Created agent '{AGENT_NAME}' (version {agent.version}) on model '{AGENT_MODEL}'.")
     print("Add these to your .env:")
     print(f"  GCP_AGENT_NAME={AGENT_NAME}")
     print(f"  GCP_AGENT_VERSION={agent.version}")
-    print("\nSmoke-test it in the Agents playground with one in-scope question")
-    print("('what is the SAE reporting timeline?') and one refusal case")
-    print("('which arm is subject 014 on?') before running the evaluation.")
+    print("\nExecutable smoke test (the portal cannot run this local Python tool):")
+    print("  python run_agent.py --agent-name demo-clinical-agent --query")
+    print("    \"what is the SAE reporting timeline?\"")
 
 
 if __name__ == "__main__":

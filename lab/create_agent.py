@@ -13,8 +13,10 @@ and cross-check the current SDK samples.
 import json
 import os
 import random
+from typing import Any, cast
 
 from azure.ai.projects import AIProjectClient
+from azure.ai.projects.models import PromptAgentDefinition
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 
@@ -85,32 +87,30 @@ def get_forecast(location: str, days: int = 3) -> str:
 TOOL_DEFINITIONS = [
     {
         "type": "function",
-        "function": {
-            "name": "get_weather",
-            "description": "Get current weather conditions for a UK town or city.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "location": {"type": "string", "description": "Town or city name, e.g. 'Truro'."}
-                },
-                "required": ["location"],
+        "name": "get_weather",
+        "description": "Get current weather conditions for a UK town or city.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string", "description": "Town or city name, e.g. 'Truro'."}
             },
+            "required": ["location"],
         },
+        "strict": False,
     },
     {
         "type": "function",
-        "function": {
-            "name": "get_forecast",
-            "description": "Get a 1-7 day forecast for a UK town or city.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "location": {"type": "string", "description": "Town or city name."},
-                    "days": {"type": "integer", "description": "Days ahead, 1-7.", "default": 3},
-                },
-                "required": ["location"],
+        "name": "get_forecast",
+        "description": "Get a 1-7 day forecast for a UK town or city.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "location": {"type": "string", "description": "Town or city name."},
+                "days": {"type": "integer", "description": "Days ahead, 1-7.", "default": 3},
             },
+            "required": ["location"],
         },
+        "strict": False,
     },
 ]
 
@@ -122,21 +122,19 @@ def main() -> None:
 
     agent = project_client.agents.create_version(
         agent_name=AGENT_NAME,
-        definition={
-            "kind": "prompt_agent",
-            "model": AGENT_MODEL,
-            "instructions": SYSTEM_INSTRUCTIONS,
-            "tools": TOOL_DEFINITIONS,
-        },
+        definition=PromptAgentDefinition(
+            model=AGENT_MODEL,
+            instructions=SYSTEM_INSTRUCTIONS,
+            tools=cast(Any, TOOL_DEFINITIONS),
+        ),
     )
 
     print(f"Created agent '{AGENT_NAME}' (version {agent.version}) on model '{AGENT_MODEL}'.")
     print("Add these to your .env:")
     print(f"  DEMO_AGENT_NAME={AGENT_NAME}")
     print(f"  DEMO_AGENT_VERSION={agent.version}")
-    print("\nTip: open the Agents playground in the portal, ask it two or three")
-    print("questions, and check the traces view - that traffic also gives the")
-    print("trace-based evaluation demo something to chew on later.")
+    print("\nExecutable smoke test (the portal cannot run these local Python tools):")
+    print("  python run_agent.py --query \"What's the weather in Truro?\"")
 
 
 if __name__ == "__main__":

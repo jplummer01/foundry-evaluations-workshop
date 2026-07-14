@@ -13,12 +13,71 @@ from typing import Any
 from azure.ai.projects import AIProjectClient
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
+from openai import BadRequestError
 
 from agent_tools import AGENT_RUNTIMES, AgentRuntime, get_agent_runtime
 
 load_dotenv()
 
 MAX_TOOL_ROUNDS = 8
+
+
+def is_content_filter_error(exc: BadRequestError) -> bool:
+    """Return whether Foundry rejected a prompt under its content policy."""
+    error = exc.body
+    return isinstance(error, dict) and error.get("code") == "content_filter"
+
+
+def parse_json_value(value: str) -> Any:
+    """Parse JSON tool data when possible, preserving non-JSON strings."""
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return value
+
+
+def to_evaluator_messages(output_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Convert Responses API items to Foundry's role-bearing agent schema."""
+    messages: list[dict[str, Any]] = []
+    for item in output_items:
+        item_type = item.get("type")
+        if item_type == "function_call":
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_call",
+                            "tool_call_id": item["call_id"],
+                            "name": item["name"],
+                            "arguments": parse_json_value(item["arguments"]),
+                        }
+                    ],
+                }
+            )
+        elif item_type == "function_call_output":
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": item["call_id"],
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_result": parse_json_value(item["output"]),
+                        }
+                    ],
+                }
+            )
+        elif item_type == "message":
+            content = [
+                {"type": "text", "text": part["text"]}
+                for part in item.get("content", [])
+                if part.get("type") in {"input_text", "output_text"} and "text" in part
+            ]
+            if content:
+                messages.append({"role": item.get("role", "assistant"), "content": content})
+    return messages
+
 
 def run_agent(
     client: Any,
@@ -97,6 +156,7 @@ def run_dataset(
     """Run every JSONL query and atomically write Foundry eval input."""
     temporary_path = output_path.with_name(f"{output_path.name}.tmp")
     row_count = 0
+    skipped_rows: list[int] = []
 
     try:
         with dataset_path.open(encoding="utf-8") as source, temporary_path.open(
@@ -118,13 +178,20 @@ def run_dataset(
                     )
 
                 print(f"\n[{line_number}] {item['query']}")
-                answer, output_items = run_agent(
-                    client,
-                    agent_name=agent_name,
-                    agent_version=agent_version,
-                    query=item["query"],
-                    runtime=runtime,
-                )
+                try:
+                    answer, output_items = run_agent(
+                        client,
+                        agent_name=agent_name,
+                        agent_version=agent_version,
+                        query=item["query"],
+                        runtime=runtime,
+                    )
+                except BadRequestError as exc:
+                    if not is_content_filter_error(exc):
+                        raise
+                    skipped_rows.append(line_number)
+                    print("Skipped: prompt was blocked by the Azure OpenAI content filter.")
+                    continue
                 destination.write(
                     json.dumps(
                         {
@@ -134,6 +201,7 @@ def run_dataset(
                             },
                             "sample": {
                                 "output_items": output_items,
+                                "output_messages": to_evaluator_messages(output_items),
                                 "output_text": answer,
                             },
                         }
@@ -141,12 +209,17 @@ def run_dataset(
                     + "\n"
                 )
                 row_count += 1
+        if row_count == 0:
+            raise RuntimeError("No responses were generated; every query was content-filtered.")
         temporary_path.replace(output_path)
     except BaseException:
         temporary_path.unlink(missing_ok=True)
         raise
 
     print(f"\nWrote {row_count} completed response rows to {output_path}")
+    if skipped_rows:
+        rows = ", ".join(str(row) for row in skipped_rows)
+        print(f"Skipped {len(skipped_rows)} content-filtered row(s): {rows}")
 
 
 def main() -> None:

@@ -161,6 +161,7 @@ For agent creation specifically, the current wire enum for a prompt agent in `cr
 |---|---|
 | `DefaultAzureCredential` failure | `az login`; confirm the right tenant/subscription |
 | 401/403 on project endpoint | Endpoint must include **account and project**: `https://<account>.services.ai.azure.com/api/projects/<project>`; confirm Foundry User role |
+| `content_filter` while generating responses | The platform blocked that prompt before the agent ran. `run_agent.py` reports and skips the row, then writes all completed responses to the requested output file |
 | Run status **Partial** | Usually a data-mapping problem — field names are **case-sensitive** against the JSONL |
 | `429 Too Many Requests` | Tenant/subscription/project rate limits on eval-run creation. Honour `retry-after`, back off exponentially, shrink the dataset |
 | Evaluator "pass" with a not-supported reason | The agent invoked a tool type the tool evaluators don't support — wrap it as a user-defined tool to make it evaluable |

@@ -62,7 +62,7 @@ The weather agent answers UK weather questions via `get_weather` / `get_forecast
 
 When `run_cloud_eval.py` finishes, open **Evaluation** in the Foundry portal, find a **failing row**, and read the judge's reasoning field. Each result links back to the underlying agent trace. Understanding *why* the judge scored a row is the point of the whole lab — a green run tells you nothing you didn't already assume.
 
-The evaluation applies four evaluators: **Intent Resolution** (system), **Tool Call Accuracy** (process), **Task Adherence** (system), and **Violence** (safety). The data mappings are the concept to internalise: `{{item.query}}` is a dataset field, `{{sample.output_items}}` is the full response including tool calls, `{{sample.output_text}}` is just the message text.
+The evaluation applies four evaluators: **Intent Resolution** (system), **Tool Call Accuracy** (process), **Task Adherence** (system), and **Violence** (safety). The data mappings are the concept to internalise: `{{item.query}}` is a dataset field, `{{sample.output_messages}}` is the role-bearing conversation including tool calls and results, and `{{sample.output_text}}` is just the final message text. The generated file also retains raw Responses API records in `sample.output_items` for inspection.
 
 ## Run order — GxP variant (optional)
 
@@ -111,6 +111,7 @@ Use the canonical tables rather than guessing — the top offenders and fixes ar
 
 - `DefaultAzureCredential` failure → `az login`; confirm the right tenant/subscription.
 - `401/403` → your endpoint is missing the account/project path, or you lack the **Foundry User** role.
+- `content_filter` during `run_agent.py` → the platform blocked that prompt before execution; the script skips it, reports the row number, and still writes the other completed responses.
 - Run status **Partial** → almost always a data-mapping issue; field names are **case-sensitive** against the JSONL.
 - `429 Too Many Requests` → eval-run creation is rate-limited; honour `retry-after` and back off (this is expected, not a bug in your code).
 

@@ -113,6 +113,7 @@ Pull requests updating scripts or slides against newer SDK releases are welcome 
 |---|---|
 | `DefaultAzureCredential` failure | `az login`; confirm the right tenant/subscription |
 | 401/403 on project endpoint | Endpoint must include **account and project**: `https://<account>.services.ai.azure.com/api/projects/<project>`; confirm the Foundry User role |
+| `content_filter` while generating responses | `run_agent.py` skips the blocked row, reports its line number, and writes the remaining genuine responses; do not fabricate an agent answer for that row |
 | Run status **Partial** | Almost always a data-mapping issue — field names are **case-sensitive** against the JSONL |
 | `429 Too Many Requests` | Eval-run creation is rate-limited at tenant/subscription/project level. Honour `retry-after`, back off exponentially. With a full room, stagger submissions by table |
 | Tool evaluator returns "pass — not supported" | The agent invoked a tool type the evaluators don't support; wrap it as a user-defined tool |

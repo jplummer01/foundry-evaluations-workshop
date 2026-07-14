@@ -155,7 +155,7 @@ Walk the three-step cloud evaluation pattern:
 
 **Step 1 — Define testing criteria (evaluators + data mappings).** The mapping syntax is the concept to teach:
 - `{{item.X}}` → fields from the test data (e.g. `{{item.query}}`)
-- `{{sample.output_items}}` → the full agent/model response including tool calls
+- `{{sample.output_messages}}` → role-bearing messages including tool calls and results
 - `{{sample.output_text}}` → just the response text
 
 ```python

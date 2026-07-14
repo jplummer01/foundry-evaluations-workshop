@@ -9,8 +9,11 @@ Pattern (stable even as parameter names evolve):
 
 Data-mapping syntax (the concept this lab exists to teach):
   {{item.X}}              -> a field from your test data, e.g. {{item.query}}
-  {{sample.output_items}} -> the FULL agent/model response including tool calls
+    {{sample.output_messages}} -> role-bearing messages with tool calls/results
   {{sample.output_text}}  -> just the response message text
+
+The generated JSONL also retains raw Responses API records in output_items for
+inspection. Agent evaluators use output_messages because each message needs a role.
 
 Usage:
   python run_cloud_eval.py                                   # weather agent, dataset.jsonl
@@ -75,6 +78,14 @@ def validate_precomputed_dataset(path: Path) -> None:
                 raise SystemExit(
                     f"Invalid precomputed row {line_number}: sample output fields are incomplete."
                 )
+            messages = sample.get("output_messages")
+            if not isinstance(messages, list) or not messages or any(
+                not isinstance(message, dict) or "role" not in message for message in messages
+            ):
+                raise SystemExit(
+                    f"Invalid precomputed row {line_number}: sample.output_messages must contain "
+                    "role-bearing evaluator messages. Regenerate the file with run_agent.py."
+                )
             row_count += 1
     if row_count == 0:
         raise SystemExit("Precomputed dataset contains no rows.")
@@ -111,7 +122,7 @@ def ai_evaluator(name: str, evaluator: str, mapping: dict) -> dict:
 
 tool_call_mapping = {
     "query": "{{item.query}}",
-    "response": "{{sample.output_items}}",
+    "response": "{{sample.output_messages}}",
 }
 if args.precomputed:
     tool_call_mapping["tool_definitions"] = "{{item.tool_definitions}}"
@@ -120,7 +131,7 @@ testing_criteria = [
     ai_evaluator(
         "Intent Resolution",
         "builtin.intent_resolution",
-        {"query": "{{item.query}}", "response": "{{sample.output_items}}"},
+        {"query": "{{item.query}}", "response": "{{sample.output_text}}"},
     ),
     ai_evaluator(
         "Tool Call Accuracy",
@@ -130,7 +141,11 @@ testing_criteria = [
     ai_evaluator(
         "Task Adherence",
         "builtin.task_adherence",
-        {"query": "{{item.query}}", "response": "{{sample.output_text}}"},
+        {
+            "query": "{{item.query}}",
+            "response": "{{sample.output_messages}}",
+            "tool_definitions": "{{item.tool_definitions}}",
+        },
     ),
     {
         "type": "azure_ai_evaluator",

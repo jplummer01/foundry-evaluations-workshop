@@ -19,18 +19,18 @@ az login
 python check_setup.py     # every line should print [OK] before proceeding
 ```
 
-Standard run order: `check_setup.py` → `create_agent.py` → `run_cloud_eval.py` → `run_local_eval.py` (stretch). Requires an actual Foundry project, a deployed judge model, and the **Foundry User** role — there is no offline/mock mode, so scripts cannot be "tested" without Azure access. `az login` and the `.env` values (`FOUNDRY_PROJECT_ENDPOINT`, `FOUNDRY_JUDGE_DEPLOYMENT`, `FOUNDRY_AGENT_MODEL`) are mandatory. The endpoint **must include both account and project**: `https://<account>.services.ai.azure.com/api/projects/<project>`.
+Standard run order: `check_setup.py` → `create_agent.py` → `run_agent.py --dataset dataset.jsonl --output responses.jsonl` → `run_cloud_eval.py --precomputed --dataset responses.jsonl` → `run_local_eval.py` (stretch). Requires an actual Foundry project, a deployed judge model, and the **Foundry User** role — there is no offline/mock mode, so scripts cannot be "tested" without Azure access. `az login` and the `.env` values (`FOUNDRY_PROJECT_ENDPOINT`, `FOUNDRY_JUDGE_DEPLOYMENT`, `FOUNDRY_AGENT_MODEL`) are mandatory. The endpoint **must include both account and project**: `https://<account>.services.ai.azure.com/api/projects/<project>`.
 
 ## Two parallel lab tracks share one codebase
 
 - **Standard track** — a `demo-weather-agent` (`create_agent.py`) with `get_weather`/`get_forecast` mock tools, evaluated against `dataset.jsonl` (20 rows incl. out-of-scope + adversarial).
 - **GxP track** — a `demo-sop-agent` (`create_agent_gxp.py`) for pharma/life-sciences delivery, where *refusal behaviour* (release decisions, data-integrity/ALCOA+ traps) is the primary test, evaluated against `dataset_gxp_sample.jsonl` / a generated `dataset_gxp_generated.jsonl`.
 
-Both tracks use the **same** `run_cloud_eval.py`; the GxP track only changes `--dataset` and `--agent-name` so both agents coexist in one project. When adding features, keep this coexistence intact — don't hardcode the weather agent. Rationale lives in `docs/gxp-extension.md` and `lab/README.md`.
+Both tracks use the **same** `run_agent.py` → `run_cloud_eval.py --precomputed` workflow; the GxP track changes the source/response dataset names and `--agent-name` so both agents coexist in one project. When adding features, keep this coexistence intact — don't hardcode the weather agent. Rationale lives in `docs/gxp-extension.md` and `lab/README.md`.
 
 ## Conventions specific to this repo
 
-- **Data mappings are the teaching point.** In `run_cloud_eval.py`, `{{item.X}}` pulls a field from the JSONL row, `{{sample.output_items}}` is the full response incl. tool calls, `{{sample.output_text}}` is just the message text. JSONL field names are **case-sensitive** — a mismatch surfaces as a `Partial` run status, not an error.
+- **Data mappings are the teaching point.** In `run_cloud_eval.py`, `{{item.X}}` pulls a field from the JSONL row, `{{sample.output_messages}}` is the role-bearing conversation including tool calls/results, and `{{sample.output_text}}` is the final response text. Generated JSONL retains raw Responses API records in `sample.output_items` for inspection, but evaluators do not consume them. JSONL field names are **case-sensitive** — a mismatch surfaces as a `Partial` run status, not an error.
 - **Mock tool data is deterministic on purpose** — conditions are seeded by location name so eval runs are comparable. Keep any new mock tools deterministic.
 - **Synthetic GxP datasets are draft until reviewed.** `generate_synthetic_dataset.py` emits every row with `review_status: "pending"` plus a `.metadata.json` provenance sidecar. Rows must be human-reviewed to `approved` before use as evaluation evidence — this gate is a deliberate lab exercise, do not bypass it.
 - **Lab scripts stay dependency-light and runnable end-to-end** on a fresh Foundry project (see `requirements.txt` — four packages). Don't add heavy dependencies or framework scaffolding.
@@ -57,7 +57,7 @@ Recommended gating policy (keep this consistent across both files): **safety eva
 
 ## Facilitator vs. attendee framing
 
-`docs/facilitator-guide.md` is the delivery source of truth; align any workshop-facing edit with it. Its structure is a four-module arc — **1. Concepts & the evaluator taxonomy** (quality / safety / agent (system vs. process) / Rubric / custom) → **2. Lab 1: portal then SDK** → **3. Lab 2: live-agent, custom evaluators, trace-based eval** → **4. Governance, CI/CD & continuous evaluation** — plus a wrap-up and appendices (dataset starter, timing-flex). When touching workshop content, respect these facilitator realities:
+`docs/facilitator-guide.md` is the delivery source of truth; align any workshop-facing edit with it. Its structure is a four-module arc — **1. Concepts & the evaluator taxonomy** (quality / safety / agent (system vs. process) / Rubric / custom) → **2. Lab 1: portal then SDK** → **3. Lab 2: prompt-agent execution, custom evaluators, trace-based eval** → **4. Governance, CI/CD & continuous evaluation** — plus a wrap-up and appendices (dataset starter, timing-flex). When touching workshop content, respect these facilitator realities:
 
 - **Provision one Foundry project per attendee pair**, each with a deployed judge model and the **Foundry User** role.
 - **`429` rate limits are the #1 lab failure** — eval-run creation is throttled at tenant/subscription/project level; guidance is stagger starts by table, raise judge-model TPM quota, and back off on `retry-after` (never "your code is broken").

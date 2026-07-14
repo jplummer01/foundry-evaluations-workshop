@@ -162,8 +162,8 @@ Walk the three-step cloud evaluation pattern:
 testing_criteria = [
     {
         "type": "azure_ai_evaluator",
-        "name": "Task Adherence",
-        "evaluator_name": "builtin.task_adherence",
+        "name": "Intent Resolution",
+        "evaluator_name": "builtin.intent_resolution",
         "initialization_parameters": {"deployment_name": model_deployment},  # judge model
         "data_mapping": {
             "query": "{{item.query}}",
@@ -172,10 +172,34 @@ testing_criteria = [
     },
     {
         "type": "azure_ai_evaluator",
-        "name": "Fluency",
-        "evaluator_name": "builtin.fluency",
+        "name": "Tool Call Accuracy",
+        "evaluator_name": "builtin.tool_call_accuracy",
         "initialization_parameters": {"deployment_name": model_deployment},
-        "data_mapping": {"response": "{{sample.output_text}}"},
+        "data_mapping": {
+            "query": "{{item.query}}",
+            "response": "{{sample.output_messages}}",
+            "tool_definitions": "{{item.tool_definitions}}",
+        },
+    },
+    {
+        "type": "azure_ai_evaluator",
+        "name": "Task Adherence",
+        "evaluator_name": "builtin.task_adherence",
+        "initialization_parameters": {"deployment_name": model_deployment},
+        "data_mapping": {
+            "query": "{{item.query}}",
+            "response": "{{sample.output_messages}}",
+            "tool_definitions": "{{item.tool_definitions}}",
+        },
+    },
+    {
+        "type": "azure_ai_evaluator",
+        "name": "Violence",
+        "evaluator_name": "builtin.violence",
+        "data_mapping": {
+            "query": "{{item.query}}",
+            "response": "{{sample.output_text}}",
+        },
     },
 ]
 ```
@@ -203,7 +227,7 @@ testing_criteria = [
 
 The demo is a prompt agent: Foundry stores its instructions and function schemas, while the
 workshop's deterministic Python function implementations stay on the client. The portal and a
-service-side live target can display a custom function call, but cannot execute that local code.
+service-side live target can display the model's requested tool call, but cannot execute that local code.
 Run the complete Responses API tool loop first, then submit the resulting `item` / `sample` JSONL
 for cloud scoring:
 
@@ -216,7 +240,8 @@ Use `python run_agent.py --query "What's the weather in Truro?"` to demonstrate 
 client receives a `function_call`, executes the matching local handler, returns a
 `function_call_output` with the same call ID, and repeats until the model emits final text.
 `run_cloud_eval.py` retains a live-target mode for comparison, but warn attendees that it cannot
-produce complete answers for these local custom functions.
+produce complete answers for these local custom functions. For the workshop run, `--precomputed`
+is required so Foundry scores the tool outputs and final answers produced by `run_agent.py`.
 
 Evaluator set for this lab — one system, two process:
 - `builtin.intent_resolution` (system: did it understand the ask?)

@@ -52,8 +52,8 @@ python run_local_eval.py  # 4. (stretch) local eval on a 3-row sample
 ```
 
 The prompt agent stores the function schemas, while `run_agent.py` executes the local Python
-implementations and returns their outputs to the model. The portal playground can show a function
-call but cannot execute this local code. For a one-question smoke test, use
+implementations and returns their outputs to the model. The portal playground can display the
+model's requested tool call but cannot execute this local code. For a one-question smoke test, use
 `python run_agent.py --query "What's the weather in Truro?"`.
 
 The weather agent answers UK weather questions via `get_weather` / `get_forecast` and is *meant* to decline out-of-scope and adversarial requests — `dataset.jsonl` (20 rows) deliberately includes those so the abstention and safety evaluators have something to catch.

@@ -14,7 +14,7 @@ A complete, ready-to-deliver workshop on evaluating AI agents in production with
 
 1. Why agent quality erodes rather than crashes — and why evaluation is a lifecycle discipline, not a pre-ship checkbox
 2. The Foundry evaluator taxonomy: quality, safety, and agent evaluators (system vs. process), plus custom and Rubric evaluators
-3. Running evaluations hands-on: portal, SDK, live agents, and production traces
+3. Running evaluations hands-on: portal, SDK-driven prompt agents, and production traces
 4. Wiring evaluation into CI/CD gates (Azure DevOps / GitHub Actions) and continuous production monitoring under governance controls
 
 As an applied case study, [`docs/model-deprecation-strategy.md`](docs/model-deprecation-strategy.md) shows how the same evaluation machinery de-risks **LLM deprecation and migration** — eval harness, shadow traffic via trace-based evaluation, canary rollout with evaluation-driven rollback, and a promotion decision gate.

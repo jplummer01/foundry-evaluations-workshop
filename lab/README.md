@@ -46,7 +46,7 @@ python run_local_eval.py    # 4. (stretch) local eval on a 3-row sample
 
 Results appear under **Evaluation** in the Foundry portal; each result links to the underlying trace.
 Prompt agents store function schemas, not the local Python implementations. The portal can display a
-custom function call but cannot execute these workshop functions; use `run_agent.py --query "..."`
+recorded tool call but cannot execute these workshop functions; use `run_agent.py --query "..."`
 for an executable smoke test. The live mode retained in `run_cloud_eval.py` has the same limitation.
 
 ## Running the GxP variant (step by step)

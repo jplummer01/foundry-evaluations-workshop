@@ -11,6 +11,7 @@ venv/
 # Eval outputs
 myevalresults.json
 *.eval-results.json
+response*.jsonl
 
 # OS / editor
 .DS_Store

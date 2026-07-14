@@ -18,10 +18,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Judge model config: the AI-assisted evaluators call this deployment.
+judge_deployment = os.environ["FOUNDRY_JUDGE_DEPLOYMENT"]
 model_config = {
     "azure_endpoint": os.environ["FOUNDRY_PROJECT_ENDPOINT"].split("/api/projects/")[0],
-    "azure_deployment": os.environ["FOUNDRY_JUDGE_DEPLOYMENT"],
+    "azure_deployment": judge_deployment,
 }
+uses_reasoning_parameters = judge_deployment.lower().startswith(("gpt-5", "o1", "o3", "o4"))
 
 # Three canned rows: one good, one waffly, one off-topic - so the scores differ.
 SAMPLE = [
@@ -43,8 +45,16 @@ SAMPLE = [
 
 def main() -> None:
     credential = DefaultAzureCredential()
-    relevance = RelevanceEvaluator(model_config=model_config, credential=credential)
-    fluency = FluencyEvaluator(model_config=model_config, credential=credential)
+    relevance = RelevanceEvaluator(
+        model_config=model_config,
+        credential=credential,
+        is_reasoning_model=uses_reasoning_parameters,
+    )
+    fluency = FluencyEvaluator(
+        model_config=model_config,
+        credential=credential,
+        is_reasoning_model=uses_reasoning_parameters,
+    )
 
     for i, row in enumerate(SAMPLE, start=1):
         rel = relevance(query=row["query"], response=row["response"])

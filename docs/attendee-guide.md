@@ -51,6 +51,11 @@ python run_cloud_eval.py --precomputed --dataset responses.jsonl
 python run_local_eval.py  # 4. (stretch) local eval on a 3-row sample
 ```
 
+`run_cloud_eval.py` exports normalized `run.json`, `output-items.jsonl`, and `summary.json`
+artifacts under `artifacts/<run-id>` by default. After this track, the optional
+[`model-migration-lab.md`](../lab/model-migration-lab.md) compares two agent versions in one
+evaluation group and applies deterministic tool-contract and policy gates.
+
 The prompt agent stores the function schemas, while `run_agent.py` executes the local Python
 implementations and returns their outputs to the model. The portal playground can display the
 model's requested tool call but cannot execute this local code. For a one-question smoke test, use

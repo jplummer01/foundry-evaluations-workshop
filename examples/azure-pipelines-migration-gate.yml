@@ -1,0 +1,74 @@
+# Enforcing migration gate for workshop prompt agents with local Python tools.
+# Run manually by default to control cost and evaluation-run throttling.
+
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  # Supply from a variable group: AzureAIProjectEndpoint, DeploymentName,
+  # AgentName, IncumbentVersion, CandidateVersion.
+  Dataset: dataset.jsonl
+  Policy: examples/eval-gate-policy-weather.json
+
+steps:
+  - task: AzureCLI@2
+    displayName: "Azure login (Entra ID)"
+    inputs:
+      azureSubscription: "<your-arm-service-connection>"
+      scriptType: bash
+      scriptLocation: inlineScript
+      inlineScript: az account show
+
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: "3.12"
+
+  - bash: pip install -r lab/requirements.txt
+    displayName: "Install lab dependencies"
+
+  - bash: |
+      set -euo pipefail
+      python lab/run_agent.py --dataset "lab/$(Dataset)" \
+        --output lab/responses-incumbent.jsonl --agent-name "$(AgentName)" \
+        --agent-version "$(IncumbentVersion)"
+      python lab/check_contracts.py --dataset lab/responses-incumbent.jsonl \
+        --output artifacts/incumbent-contract-results.json
+      python lab/run_cloud_eval.py --precomputed --dataset responses-incumbent.jsonl \
+        --agent-name "$(AgentName)" --agent-version "$(IncumbentVersion)" \
+        --run-name migration-incumbent --artifacts-dir artifacts/incumbent
+    displayName: "Evaluate incumbent"
+    env:
+      FOUNDRY_PROJECT_ENDPOINT: $(AzureAIProjectEndpoint)
+      FOUNDRY_JUDGE_DEPLOYMENT: $(DeploymentName)
+
+  - bash: |
+      set -euo pipefail
+      python lab/run_agent.py --dataset "lab/$(Dataset)" \
+        --output lab/responses-candidate.jsonl --agent-name "$(AgentName)" \
+        --agent-version "$(CandidateVersion)"
+      python lab/check_contracts.py --dataset lab/responses-candidate.jsonl \
+        --output artifacts/candidate-contract-results.json
+      EVALUATION_ID=$(python -c 'import json; print(json.load(open("artifacts/incumbent/run.json"))["eval_id"])')
+      python lab/run_cloud_eval.py --precomputed --dataset responses-candidate.jsonl \
+        --agent-name "$(AgentName)" --agent-version "$(CandidateVersion)" \
+        --evaluation-id "$EVALUATION_ID" --run-name migration-candidate \
+        --artifacts-dir artifacts/candidate
+      python lab/eval_gate.py --candidate artifacts/candidate \
+        --incumbent artifacts/incumbent --policy "$(Policy)" \
+        --contracts artifacts/candidate-contract-results.json
+    displayName: "Evaluate and gate candidate"
+    env:
+      FOUNDRY_PROJECT_ENDPOINT: $(AzureAIProjectEndpoint)
+      FOUNDRY_JUDGE_DEPLOYMENT: $(DeploymentName)
+
+  - task: PublishPipelineArtifact@1
+    displayName: "Publish evaluation evidence"
+    condition: always()
+    inputs:
+      targetPath: "$(System.DefaultWorkingDirectory)/artifacts"
+      artifact: migration-evaluation-evidence
+
+  # Baseline promotion remains a separate reviewed change-control action.

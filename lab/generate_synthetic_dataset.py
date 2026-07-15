@@ -263,6 +263,9 @@ def main() -> None:
             generate_category(client, system_prompt, category, description, args.per_category)
         )
 
+    for index, row in enumerate(all_rows, start=1):
+        row["case_id"] = f"{args.discipline}-generated-{index:03d}"
+
     out_path = Path(out_name)
     with out_path.open("w") as fh:
         for row in all_rows:

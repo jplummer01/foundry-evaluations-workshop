@@ -12,6 +12,7 @@ venv/
 myevalresults.json
 *.eval-results.json
 response*.jsonl
+lab/artifacts/
 
 # OS / editor
 .DS_Store

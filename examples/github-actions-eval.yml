@@ -1,20 +1,18 @@
-# Evaluation as a PR gate in GitHub Actions.
-# Uses OIDC federation to Entra ID - no long-lived secrets.
-# Check the marketplace for the current Microsoft agent-evaluation action name
-# and pin a version; the action ecosystem is evolving alongside the SDK.
+# Native Foundry agent-version comparison report for GitHub Actions.
+# This is for hosted/service-executable agents. Workshop prompt agents use local
+# Python tools, so use github-actions-migration-gate.yml for those agents.
 
-name: agent-eval-gate
+name: agent-eval-comparison
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   id-token: write   # OIDC federation to Entra ID
   contents: read
 
 jobs:
-  evaluate:
+  compare:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,37 +20,21 @@ jobs:
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      # Portable fallback: run the same SDK pattern used in lab/run_cloud_eval.py.
-      # This works regardless of marketplace action availability.
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # Beta tag shown for workshop readability. Production workflows should
+      # pin a reviewed commit SHA and revalidate it before each delivery.
+      - name: Compare hosted agent versions
+        uses: microsoft/ai-agent-evals@v3-beta
         with:
-          python-version: "3.12"
+          azure-ai-project-endpoint: ${{ vars.FOUNDRY_PROJECT_ENDPOINT }}
+          deployment-name: ${{ vars.FOUNDRY_JUDGE_DEPLOYMENT }}
+          data-path: ${{ github.workspace }}/examples/eval-gate-dataset.json
+          agent-ids: ${{ vars.AGENT_IDS }}
+          baseline-agent-id: ${{ vars.BASELINE_AGENT_ID }}
 
-      - name: Run cloud evaluation
-        env:
-          FOUNDRY_PROJECT_ENDPOINT: ${{ vars.FOUNDRY_PROJECT_ENDPOINT }}
-          FOUNDRY_JUDGE_DEPLOYMENT: ${{ vars.FOUNDRY_JUDGE_DEPLOYMENT }}
-          DEMO_AGENT_NAME: ${{ vars.AGENT_NAME }}
-        run: |
-          pip install -r lab/requirements.txt
-          python lab/run_cloud_eval.py
-
-      # Discipline note (GxP tracks — see docs/gxp-disciplines.md): the same step
-      # gates any agent. Point vars.AGENT_NAME at the discipline agent (e.g.
-      # demo-gmp-agent / demo-lab-agent / demo-clinical-agent / demo-distribution-agent)
-      # and pass its dataset, e.g.:
-      #   python lab/run_cloud_eval.py --dataset lab/dataset_glp_sample.jsonl \
-      #     --agent-name "${{ vars.AGENT_NAME }}" --run-name ci-glp
-      # Variable names match lab/.env.example so the fallback path stays runnable.
-
-      # NOTE: as written, run_cloud_eval.py submits the run and polls to completion
-      # but exits 0 regardless of per-row scores - it is a "run the eval" step, not
-      # yet an enforcing gate. To make this block a merge, extend the script (or add
-      # a step here) to retrieve run results and `exit 1` when a threshold is breached.
-      # Suggested policy: safety evaluators (builtin.violence) -> hard fail;
-      # quality evaluators -> fail on regression vs. a stored baseline.
+      # The public action contract documents a rendered comparison summary, not
+      # machine-readable outputs or threshold-based job failure. Do not parse
+      # undocumented internals; use the enforcing precomputed workflow instead.

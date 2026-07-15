@@ -171,6 +171,7 @@ def run_dataset(
                     raise ValueError(f"Invalid JSON on {dataset_path}:{line_number}") from exc
                 if not isinstance(item, dict) or not isinstance(item.get("query"), str):
                     raise ValueError(f"Row {line_number} must be an object with a string 'query'.")
+                item.setdefault("case_id", f"{dataset_path.stem}-{line_number:03d}")
                 if "review_status" in item and item["review_status"] != "approved":
                     raise ValueError(
                         f"Row {line_number} has review_status={item['review_status']!r}; "

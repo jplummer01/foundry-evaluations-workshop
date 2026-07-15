@@ -1,0 +1,93 @@
+# Enforcing migration gate for this workshop's prompt agents with local tools.
+# Manual by default to control evaluation spend and tenant/project 429 pressure.
+
+name: precomputed-agent-migration-gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      FOUNDRY_PROJECT_ENDPOINT: ${{ vars.FOUNDRY_PROJECT_ENDPOINT }}
+      FOUNDRY_JUDGE_DEPLOYMENT: ${{ vars.FOUNDRY_JUDGE_DEPLOYMENT }}
+      AGENT_NAME: ${{ vars.AGENT_NAME }}
+      INCUMBENT_VERSION: ${{ vars.INCUMBENT_VERSION }}
+      CANDIDATE_VERSION: ${{ vars.CANDIDATE_VERSION }}
+      DATASET: ${{ vars.DATASET || 'dataset.jsonl' }}
+      POLICY: ${{ vars.POLICY || 'examples/eval-gate-policy-weather.json' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: lab/requirements.txt
+
+      - name: Install lab dependencies
+        run: pip install -r lab/requirements.txt
+
+      - name: Generate incumbent responses and check contracts
+        run: |
+          python lab/run_agent.py --dataset "lab/$DATASET" \
+            --output lab/responses-incumbent.jsonl --agent-name "$AGENT_NAME" \
+            --agent-version "$INCUMBENT_VERSION"
+          python lab/check_contracts.py --dataset lab/responses-incumbent.jsonl \
+            --output artifacts/incumbent-contract-results.json
+
+      - name: Evaluate incumbent
+        run: |
+          python lab/run_cloud_eval.py --precomputed --dataset responses-incumbent.jsonl \
+            --agent-name "$AGENT_NAME" --agent-version "$INCUMBENT_VERSION" \
+            --run-name migration-incumbent --artifacts-dir artifacts/incumbent
+
+      - name: Generate candidate responses and check contracts
+        run: |
+          python lab/run_agent.py --dataset "lab/$DATASET" \
+            --output lab/responses-candidate.jsonl --agent-name "$AGENT_NAME" \
+            --agent-version "$CANDIDATE_VERSION"
+          python lab/check_contracts.py --dataset lab/responses-candidate.jsonl \
+            --output artifacts/candidate-contract-results.json
+
+      - name: Evaluate candidate in the same evaluation group
+        run: |
+          EVALUATION_ID=$(python -c 'import json; print(json.load(open("artifacts/incumbent/run.json"))["eval_id"])')
+          python lab/run_cloud_eval.py --precomputed --dataset responses-candidate.jsonl \
+            --agent-name "$AGENT_NAME" --agent-version "$CANDIDATE_VERSION" \
+            --evaluation-id "$EVALUATION_ID" --run-name migration-candidate \
+            --artifacts-dir artifacts/candidate
+
+      - name: Apply deterministic migration policy
+        run: |
+          python lab/eval_gate.py --candidate artifacts/candidate \
+            --incumbent artifacts/incumbent --policy "$POLICY" \
+            --contracts artifacts/candidate-contract-results.json
+          cat artifacts/candidate/gate-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-evaluation-evidence
+          path: |
+            artifacts/
+            lab/responses-incumbent.jsonl
+            lab/responses-candidate.jsonl
+          retention-days: 30
+
+      # Baseline promotion is a reviewed change-control action. This workflow
+      # deliberately does not commit artifacts or promote the candidate.

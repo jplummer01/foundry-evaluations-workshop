@@ -48,6 +48,9 @@ foundry-evaluations-workshop/
 │   ├── run_agent.py             ← executes local tools; writes completed responses
 │   ├── dataset.jsonl            ← 20-row eval dataset incl. adversarial rows
 │   ├── run_cloud_eval.py        ← Lab 1B / 2A: cloud scoring of completed responses
+│   ├── eval_artifacts.py / eval_gate.py / check_contracts.py
+│   │                               ← normalized evidence + deterministic policy
+│   ├── model-migration-lab.md   ← optional incumbent/candidate migration exercise
 │   ├── run_local_eval.py        ← stretch: local eval with azure-ai-evaluation
 │   ├── generate_synthetic_dataset.py  ← GxP variant: compliant synthetic
 │   │                                     dataset generation (--discipline)
@@ -55,8 +58,9 @@ foundry-evaluations-workshop/
 │   ├── dataset_gxp_sample.jsonl ← GxP variant: 12 pre-reviewed sample rows
 │   └── dataset_{gmp,glp,gcp,gdp}_sample.jsonl  ← per-discipline sample datasets
 └── examples/
-    ├── azure-pipelines-eval.yml     ← evaluation as an Azure DevOps gate
-    └── github-actions-eval.yml      ← evaluation as a GitHub Actions gate
+    ├── README.md                     ← comparison vs. enforcement pattern matrix
+    ├── *-eval.yml                    ← native Foundry comparison reports
+    └── *-migration-gate.yml          ← enforcing precomputed-response workflows
 ```
 
 ## Quick start

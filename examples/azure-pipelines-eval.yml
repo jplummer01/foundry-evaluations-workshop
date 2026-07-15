@@ -1,4 +1,4 @@
-# Evaluation as a merge/deploy gate in Azure DevOps.
+# Native Foundry agent-version comparison report in Azure DevOps.
 # Requires the "AI Agent Evaluation" extension installed in your ADO org
 # and an ARM service connection (Entra ID auth - no keys in the pipeline).
 #
@@ -6,9 +6,8 @@
 # and a pairwise statistical comparison when multiple agent versions are
 # evaluated - i.e. it tells you whether a difference is meaningful or noise.
 #
-# Suggested gating policy:
-#   - safety evaluators (e.g. builtin.violence) -> hard gates
-#   - quality evaluators -> regression-vs-baseline gates
+# This task is for hosted/service-executable agents. Workshop prompt agents use
+# local Python tools; use azure-pipelines-migration-gate.yml for those agents.
 
 trigger:
   branches:
@@ -20,7 +19,7 @@ pool:
 
 variables:
   # Define these as pipeline variables or in a variable group:
-  # AzureAIProjectEndpoint, DeploymentName (judge model), AgentIds
+  # AzureAIProjectEndpoint, DeploymentName, AgentIds, BaselineAgentId
 
 steps:
   # Authenticate with Entra ID via the ARM service connection first
@@ -39,9 +38,14 @@ steps:
       deployment-name: "$(DeploymentName)"
       data-path: "$(System.DefaultWorkingDirectory)/examples/eval-gate-dataset.json"
       agent-ids: "$(AgentIds)"
+      baseline-agent-id: "$(BaselineAgentId)"
 
   # Discipline note (GxP tracks — see docs/gxp-disciplines.md): to gate a GxP
   # discipline agent instead, point AgentIds at that agent and swap data-path to
   # examples/eval-gate-dataset-gxp.json (or a per-discipline gate dataset built
   # from lab/dataset_<discipline>_sample.jsonl). Keep safety evaluators as hard
   # gates and quality evaluators as regression-vs-baseline gates for every track.
+
+  # Public task documentation promises rendered confidence intervals and
+  # pairwise comparisons, but does not document machine-readable threshold
+  # outputs or job-failure semantics. Use the enforcing workflow for policy.

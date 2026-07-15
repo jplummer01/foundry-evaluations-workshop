@@ -368,7 +368,7 @@ Position evaluation among its neighbours so architects leave with the full map:
 # Appendix B — Timing Flex Options
 
 - **Running long?** Cut Module 3 Part B (custom evaluators) to a 3-minute show-and-tell; the concept survives without the exercise.
-- **Running short / advanced room?** Add the local-vs-cloud comparison stretch, or a live red-team scenario (`"scenario": "red_team"`) demo.
+- **Running short / advanced room?** Add the local-vs-cloud comparison stretch, a live red-team scenario (`"scenario": "red_team"`) demo, or replace the stretch with the optional 35-45 minute model-migration lab in `lab/model-migration-lab.md`.
 - **90-minute cut-down version:** Module 1 (compressed to 25 min) + Lab 1 Part A only (25 min) + Module 4 (30 min) + wrap (10 min).
 - **Leadership variant:** drop both labs, expand 4.3 into a 30-minute governance architecture discussion, demo results dashboards only.
 

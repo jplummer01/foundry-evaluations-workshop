@@ -11,6 +11,10 @@ Runnable code for Labs 1–2 of the *Microsoft Foundry Evaluations Framework* ha
 | `run_agent.py` | Executes prompt-agent function calls locally; supports one query or a JSONL batch |
 | `dataset.jsonl` | 20-row eval dataset (incl. out-of-scope + adversarial rows) |
 | `run_cloud_eval.py` | Lab 1B / Lab 2A — cloud scoring of completed responses (`--precomputed`) or optional live target |
+| `eval_artifacts.py` | Stable adapter for hashes, normalized output items, and summaries |
+| `check_contracts.py` | Deterministic validation of tool names, arguments, schemas, and no-tool cases |
+| `eval_gate.py` | Offline policy gate for hard gates, quality floors/regressions, cohorts, and provenance |
+| `model-migration-lab.md` | Optional Lab 3 — incumbent/candidate comparison and deterministic promotion gate |
 | `run_local_eval.py` | Stretch — local evaluation on 3 rows with the Azure AI Evaluation SDK |
 | `create_agent_gxp.py` | **GxP variant** — creates the SOP & deviation-triage assistant with a `lookup_sop` tool (generic reference) |
 | `create_agent_gmp.py` | **GxP discipline: GMP** — manufacturing SOP/deviation agent (`demo-gmp-agent`) |
@@ -40,14 +44,20 @@ Required roles: **Foundry User** on the project (formerly *Azure AI User* — yo
 python check_setup.py       # 0. everything green before you start
 python create_agent.py      # 1. creates 'demo-weather-agent' in your project
 python run_agent.py --dataset dataset.jsonl --output responses.jsonl
-python run_cloud_eval.py --precomputed --dataset responses.jsonl
+python run_cloud_eval.py --precomputed --dataset responses.jsonl --artifacts-dir artifacts/weather
 python run_local_eval.py    # 4. (stretch) local eval on a 3-row sample
 ```
 
 Results appear under **Evaluation** in the Foundry portal; each result links to the underlying trace.
+The cloud command also writes `run.json`, `output-items.jsonl`, and `summary.json` under the
+artifact directory. A `Partial`, failed, or canceled run exits nonzero and is never gateable.
 Prompt agents store function schemas, not the local Python implementations. The portal can display a
 recorded tool call but cannot execute these workshop functions; use `run_agent.py --query "..."`
 for an executable smoke test. The live mode retained in `run_cloud_eval.py` has the same limitation.
+
+After the standard run, use [`model-migration-lab.md`](model-migration-lab.md) for the optional
+35-45 minute incumbent/candidate exercise. It adds deterministic contract checks and an offline
+policy gate while leaving confidence intervals and statistical significance to Foundry.
 
 ## Running the GxP variant (step by step)
 
